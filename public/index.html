@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hevy Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* state colours have fixed meanings: up = more kg, reps = new rep target, down = weight drops back, off = skipped / unchanged */
+  :root { --ground:#f2f5f8; --card:#fff; --ink:#1f2a37; --muted:#56636f; --line:#dde3ea; --band:#1f78bf; --band-ink:#fff;
+    --up:#17834a; --reps:#1f78bf; --down:#b4570b; --off:#a7b0bb; --hover:#f6f8fa; --err:#c62828; color-scheme:light; }
+  @media (prefers-color-scheme: dark) { :root { --ground:#0f141a; --card:#161d25; --ink:#e6ebf0; --muted:#9aa7b4; --line:#26303b; --band:#174a73; --band-ink:#eef5fb;
+    --up:#4cc38a; --reps:#62afec; --down:#f0a050; --off:#56616c; --hover:#1b232c; --err:#ff7b72; color-scheme:dark; } }
+  * { box-sizing:border-box; }
+  ::selection { background:var(--reps); color:#fff; }
+  body { margin:0; background:var(--ground); color:var(--ink); font:15px/1.45 'Hanken Grotesk', system-ui, sans-serif; font-variant-numeric:tabular-nums; accent-color:var(--band); }
+  button, select { font:inherit; color:inherit; cursor:pointer; }
+  :focus-visible { outline:2px solid var(--reps); outline-offset:2px; }
+  button:disabled, select:disabled { opacity:.5; cursor:default; }
+
+  .band { background:var(--band); color:var(--band-ink); }
+  .band > div { max-width:1080px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:20px; }
+  .band h1 { font-size:19px; font-weight:800; letter-spacing:-.01em; margin:0; flex:1; }
+  .band small { font-size:14px; }
+  .band button { background:transparent; border:1.5px solid color-mix(in srgb, var(--band-ink) 70%, transparent); border-radius:3px; padding:6px 14px; font-weight:600; }
+  .band button:hover:not(:disabled) { background:color-mix(in srgb, var(--band-ink) 14%, transparent); }
+
+  main { max-width:1080px; margin:0 auto; padding:32px 24px 72px; }
+  .msg { padding:10px 14px; border-radius:3px; border:1px solid var(--line); background:var(--card); margin-bottom:20px; }
+  .msg.err { border-color:var(--err); color:var(--err); }
+  .loading { color:var(--muted); }
+
+  .routine { margin-bottom:48px; }
+  .rhead { display:flex; align-items:flex-end; gap:32px; margin-bottom:14px; }
+  .rhead > div { flex:1; min-width:0; }
+  .rhead h2 { font-size:24px; font-weight:800; letter-spacing:-.015em; margin:0 0 10px; }
+  .stripe { display:flex; gap:3px; height:14px; }
+  .stripe i { flex:1; background:var(--c); }
+  .legend { display:flex; flex-wrap:wrap; gap:4px 18px; margin-top:8px; font-size:14px; color:var(--muted); }
+  .legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; background:var(--c); }
+  .send { flex:none; background:var(--ink); color:var(--ground); border:0; border-radius:3px; padding:13px 20px; font-size:16px; font-weight:700; }
+  .send:hover:not(:disabled) { background:color-mix(in srgb, var(--ink) 85%, var(--reps)); }
+
+  .table { background:var(--card); border:1px solid var(--line); border-radius:4px; overflow:hidden; }
+  .row { display:grid; grid-template-columns:minmax(0,1fr) 220px 160px 140px; gap:0 20px; align-items:start; padding:12px 16px; border-top:1px solid var(--line); }
+  .row.cols { border-top:0; padding-block:9px; font-size:13px; font-weight:600; color:var(--muted); }
+  .ex { display:flex; align-items:center; gap:14px; min-width:0; }
+  .ex img, .ex .ph { width:40px; height:40px; border-radius:3px; object-fit:cover; background:#fff; border:1px solid var(--line); flex:none; filter:grayscale(1); }
+  .ex .ph { background:none; border:0; }
+  .ex[data-toggle] { cursor:pointer; }
+  .row:not(.cols):hover { background:var(--hover); }
+  .ex div { min-width:0; }
+  .ex b { display:block; font-weight:600; }
+  .ex small { display:block; color:var(--muted); font-size:13px; }
+  /* one line per set, same line height in both columns so set N of Ostatnio sits next to set N of the target */
+  .last span, .tgt span { display:block; line-height:24px; white-space:nowrap; }
+  .last { color:var(--muted); }
+  .last small { display:block; font-size:13px; }
+  .tgt { font-size:18px; font-weight:700; color:var(--c); display:grid; grid-template-columns:10px auto; column-gap:10px; justify-content:start; }
+  .tgt::before { content:""; grid-row:1; align-self:center; width:10px; height:10px; border-radius:50%; border:2px solid var(--c); background:var(--c); box-sizing:border-box; }
+  .tgt span { grid-column:2; }
+  .row.same .tgt, .row.skip .tgt { font-size:15px; font-weight:500; color:var(--muted); }
+  .row.same .tgt::before, .row.skip .tgt::before { background:transparent; border-color:var(--off); }
+  .row.skip .ex b { color:var(--muted); }
+  .open { background:none; border:0; padding:4px 0; text-align:left; font-size:13px; color:var(--muted); justify-self:start; display:flex; align-items:center; gap:6px; }
+  .open svg { width:14px; height:14px; flex:none; transition:transform .2s ease-out; }
+  .open[aria-expanded="true"] .chev { transform:rotate(180deg); }
+  .open:hover { color:var(--ink); }
+  .open[aria-expanded="true"] { color:var(--ink); font-weight:600; }
+  .open.need { color:var(--ink); font-weight:700; }
+
+  .more { grid-column:1 / -1; margin:12px 0 4px 54px; padding:14px 16px; border-radius:3px; background:var(--card); border:1px solid var(--line); background:var(--hover); display:grid; gap:10px; font-size:14px; }
+  .more dl { margin:0; display:grid; grid-template-columns:auto 1fr; gap:4px 14px; }
+  .more dt { color:var(--muted); }
+  .more dd { margin:0; }
+  .settings { display:flex; flex-wrap:wrap; gap:8px 24px; }
+  .step { display:flex; align-items:center; gap:8px; color:var(--muted); }
+  .step select { border:1px solid var(--line); background:var(--card); border-radius:3px; padding:5px 8px; }
+  .step.need select { border:1.5px dashed var(--ink); }
+  .step.need em { font-style:normal; color:var(--ink); font-weight:700; }
+
+  @media (max-width:760px) {
+    .band small { display:none; }
+    .rhead { flex-direction:column; align-items:stretch; gap:16px; }
+    .row { grid-template-columns:minmax(0,1fr) auto; gap:8px 12px; }
+    .row.cols { display:none; }
+    .ex { grid-column:1 / -1; }
+    .open { grid-column:1 / -1; }
+    .more { margin-left:0; }
+    .step { flex-direction:column; align-items:stretch; gap:4px; }
+  }
+</style>
+</head>
+<body>
+<header class="band"><div>
+  <h1>Hevy Companion</h1>
+  <small id="lastWorkout"></small>
+  <button id="refresh">Odśwież</button>
+</div></header>
+<main>
+  <div id="status" role="status" aria-live="polite"></div>
+  <div id="plan" class="loading">Ładuję dane z Hevy…</div>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const kg = (w) => `${String(w).replace('.', ',')} kg`;
+// reps first, then load: "13 × 25 kg"
+const set = (s) => s.weight_kg != null ? `${s.reps ?? '–'} × ${kg(s.weight_kg)}`
+  : s.duration_seconds ? `${s.duration_seconds} s` : `${s.reps ?? '–'} × masa ciała`;
+const lines = (xs) => xs.map((x) => `<span>${esc(x)}</span>`).join('');
+const sets = (ss) => ss.map(set).join(', ') || '–';
+const day = (d) => new Date(d).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+let data = { steps: [], ranges: [], routines: [] };
+const open = new Set(); // expanded rows, kept across re-renders
+
+const STATES = { up: ['var(--up)', 'więcej kg'], reps: ['var(--reps)', 'nowy cel powtórzeń'], down: ['var(--down)', 'cofnięty ciężar'],
+  same: ['var(--off)', 'bez zmian'], skip: ['var(--off)', 'pominięte'] };
+const state = (e) => e.result.action === 'skip' ? 'skip' : !e.changed ? 'same'
+  : { increase: 'up', decrease: 'down' }[e.result.action] ?? 'reps';
+
+function status(text, err) { $('#status').innerHTML = text ? `<div class="msg ${err ? 'err' : ''}">${esc(text)}</div>` : ''; }
+
+function picker(id, setting, label, { value, fallback }, choices, need) {
+  const opts = [['', fallback ? `domyślny: ${fallback}` : '— wybierz —'], ...choices];
+  return `<label class="step ${need ? 'need' : ''}">${label}
+    <select data-id="${esc(id)}" data-setting="${setting}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(value) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
+    ${need ? '<em>nie ustawiony</em>' : ''}</label>`;
+}
+
+// row shows only the decision (text after the last arrow); the full reason sits in the details panel
+const outcome = (reason) => reason.split('→').at(-1).trim();
+const CHEVRON = '<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>';
+const ALERT = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 4.5v4M8 11v.5"/></svg>';
+const needsStep = (e) => e.step && e.step.value === '' && !e.step.fallback;
+
+// short settings label for the row: "8–12 · co 5 kg", "8–12 · hantle"
+function summary(e) {
+  if (!e.step) return '';
+  if (needsStep(e)) return 'Ustaw skok';
+  const range = e.reps.value ? e.reps.value.replace('-', '–') : e.reps.fallback;
+  const step = e.step.value === 'custom' ? 'własna lista' : e.step.value ? `co ${kg(e.step.value)}` : e.step.fallback.split(' ')[0];
+  return `${range} · ${step}`;
+}
+
+function settings(e) {
+  if (!e.step) return '';
+  const stepChoices = [...(e.step.value === 'custom' ? [['custom', 'własna lista (config.json)']] : []), ...data.steps.map((n) => [n, `co ${kg(n)}`])];
+  return `<div class="settings">
+    ${picker(e.id, 'range', 'Zakres powtórzeń', e.reps, data.ranges.map(([a, b]) => [`${a}-${b}`, `${a}–${b}`]), false)}
+    ${picker(e.id, 'increment', 'Skok ciężaru', e.step, stepChoices, needsStep(e))}
+  </div>`;
+}
+
+function row(e, key) {
+  const x = e.result, st = state(e), expanded = open.has(key);
+  // one line per working set in the routine, as toPutBody writes it (repsAt in engine.ts); warm-ups are left alone
+  const target = st === 'skip' ? ['pomijam']
+    : Array.from({ length: Math.max(1, e.current.length) }, (_, i) => `${x.reps[Math.min(i, x.reps.length - 1)]} × ${kg(x.weight)}`);
+  return `<div class="row ${st}" style="--c:${STATES[st][0]}">
+    <div class="ex" data-toggle="${esc(key)}">${e.thumb ? `<img src="${esc(e.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'}<div><b>${esc(e.title)}</b><small>${esc(outcome(x.reason))}</small></div></div>
+    <div class="last">${e.last ? lines(e.last.sets.filter((s) => s.type !== 'warmup').map(set)) + `<small>${day(e.last.date)}</small>` : '<span>–</span>'}</div>
+    <div class="tgt">${lines(target)}</div>
+    <button class="open ${needsStep(e) ? 'need' : ''}" data-toggle="${esc(key)}" aria-expanded="${expanded}">${needsStep(e) ? ALERT : ''}${esc(summary(e) || 'Szczegóły')}${CHEVRON}</button>
+    ${expanded ? `<div class="more">
+      <dl><dt>Dlaczego</dt><dd>${esc(x.reason)}${st === 'same' && x.action !== 'skip' ? ' (routine już ma ten cel)' : ''}</dd>
+        <dt>Teraz w Hevy</dt><dd>${esc(sets(e.current))}</dd></dl>
+      ${settings(e)}</div>` : ''}
+  </div>`;
+}
+
+function render() {
+  const dates = data.routines.flatMap((r) => r.exercises.map((e) => e.last?.date)).filter(Boolean).sort();
+  $('#lastWorkout').textContent = dates.length ? `Ostatni trening: ${day(dates.at(-1))}` : '';
+  $('#plan').className = '';
+  $('#plan').innerHTML = data.routines.map((r, i) => {
+    const states = r.exercises.map(state);
+    const n = r.exercises.filter((e) => e.changed).length;
+    const counts = Object.keys(STATES).filter((k) => states.includes(k))
+      .map((k) => `<span style="--c:${STATES[k][0]}">${states.filter((s) => s === k).length} ${STATES[k][1]}</span>`).join('');
+    return `<section class="routine">
+      <div class="rhead"><div>
+          <h2>${esc(r.title)}</h2>
+          <div class="stripe" aria-hidden="true">${r.exercises.map((e, j) => `<i style="--c:${STATES[states[j]][0]}" title="${esc(e.title)}: ${STATES[states[j]][1]}"></i>`).join('')}</div>
+          <div class="legend">${counts}</div>
+        </div>
+        <button class="send" data-push="${i}" ${n ? '' : 'disabled'}>${n ? `Wyślij ${n} ${n === 1 ? 'zmianę' : n < 5 ? 'zmiany' : 'zmian'} do Hevy` : 'Brak zmian'}</button></div>
+      <div class="table">
+        <div class="row cols" aria-hidden="true"><span>Ćwiczenie</span><span>Ostatnio</span><span>Następny cel</span><span>Ustawienia</span></div>
+        ${r.exercises.map((e, j) => row(e, `${r.id}:${j}`)).join('')}
+      </div>
+    </section>`;
+  }).join('') || '<p class="loading">Brak routine w Hevy.</p>';
+}
+
+async function load() {
+  const res = await fetch('/api/plan');
+  const body = await res.json();
+  if (!res.ok) { $('#plan').textContent = ''; return status(body.error, true); }
+  data = body;
+  render();
+}
+
+const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+
+$('#plan').addEventListener('change', async (ev) => {
+  const sel = ev.target.closest('[data-setting]');
+  if (!sel) return;
+  sel.disabled = true;
+  const value = sel.value === '' ? null : sel.dataset.setting === 'range' ? sel.value.split('-').map(Number) : Number(sel.value);
+  const res = await post(`/api/exercises/${sel.dataset.id}/settings`, { [sel.dataset.setting]: value });
+  status(res.ok ? '' : (await res.json()).error, !res.ok);
+  await load();
+});
+
+$('#plan').addEventListener('click', async (ev) => {
+  const toggle = ev.target.closest('[data-toggle]');
+  if (toggle) {
+    const key = toggle.dataset.toggle;
+    open.has(key) ? open.delete(key) : open.add(key);
+    render();
+    document.querySelector(`button[data-toggle="${CSS.escape(key)}"]`)?.focus();
+    return;
+  }
+  const btn = ev.target.closest('[data-push]');
+  if (!btn) return;
+  const r = data.routines[btn.dataset.push];
+  btn.disabled = true;
+  btn.textContent = 'Wysyłam…';
+  const res = await post(`/api/routines/${r.id}/push`, { fingerprint: r.fingerprint });
+  const body = await res.json();
+  await load();
+  status(res.ok ? `„${r.title}”: zaktualizowano ${body.changed} ćwiczeń w Hevy.` : body.error, !res.ok);
+});
+$('#refresh').addEventListener('click', () => { status(''); $('#plan').className = 'loading'; $('#plan').textContent = 'Ładuję dane z Hevy…'; load(); });
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+services:
+  hevy-companion:
+    image: kpa90/hevy-companion:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - HEVY_API_KEY=zmien_mnie
+      - TZ=Europe/Warsaw
+    volumes:
+      - hevy-companion_data:/app/data
+
+volumes:
+  hevy-companion_data:

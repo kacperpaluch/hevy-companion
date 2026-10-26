@@ -1,0 +1,12 @@
+{
+  "defaults": { "min": 8, "max": 12, "maxRpe": 9 },
+  "equipment": {
+    "dumbbell": [[1, 10, 1], [12.5, 60, 2.5]]
+  },
+  "exercises": {
+    "75A4F6C4": { "increment": 5 },
+    "C7973E0E": { "increment": 10 },
+    "422B08F1": { "min": 10, "max": 15 },
+    "C6C9B8A0": { "exclude": true }
+  }
+}

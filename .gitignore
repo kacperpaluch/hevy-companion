@@ -1,0 +1,26 @@
+# sekrety i dane lokalne
+.env
+.env.local
+data/config.json
+data/config.json.tmp
+
+# konfiguracja agentów AI (zawiera klucze API)
+.claude/
+.codex/
+.opencode/
+.skillbox/
+.vibe/
+.mcp.json
+opencode.json
+
+# robocze pliki projektowe (impeccable); brief ekranu zostaje
+.impeccable/*
+!.impeccable/surfaces/
+
+# Node
+node_modules/
+
+# ogólne
+.DS_Store
+*.log
+*.tmp

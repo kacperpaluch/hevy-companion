@@ -1,0 +1,16 @@
+.env
+.env.local
+.git
+data
+.claude
+.codex
+.opencode
+.skillbox
+.vibe
+.impeccable
+.mcp.json
+opencode.json
+*.md
+docker-compose.yml
+Dockerfile
+src/*.test.ts
