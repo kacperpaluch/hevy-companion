@@ -88,7 +88,7 @@ Przy każdym ćwiczeniu:
   „Teraz w Hevy” i listy **Zakres powtórzeń** oraz **Skok ciężaru**. Hantle mają domyślną listę ciężarów; maszyny i reszta wymagają
   wyboru skoku, a do tego czasu wiersz pokazuje „Ustaw skok”.
 
-Zmiana zakresu albo skoku zapisuje się od razu w `data/config.json` i przelicza plan. Jasny i ciemny motyw zależą od ustawień systemu.
+Zmiana zakresu albo skoku zapisuje się od razu w `data/config.json` i przelicza plan na danych z Hevy pobranych przy ostatnim odświeżeniu, więc trwa chwilę. Otwarcie strony, „Odśwież” i wysyłka zawsze pobierają świeże dane. Jasny i ciemny motyw zależą od ustawień systemu.
 
 ---
 
@@ -99,11 +99,11 @@ Decyzja opiera się na **ostatniej sesji** danego ćwiczenia (przy cofaniu cię�
 
 | Sytuacja | Decyzja |
 |---|---|
-| Wszystkie serie ≥ górna granica zakresu | następny dostępny ciężar, cel = dolna granica |
+| Wszystkie serie ≥ górna granica zakresu, wszystkie na tym samym (najwyższym) ciężarze | następny dostępny ciężar, cel = dolna granica |
 | …ale któraś seria miała RPE > `maxRpe` (domyślnie 9) | ciężar zostaje, cel = górna granica (za mały zapas) |
 | …ale to największy dostępny ciężar | ciężar zostaje |
 | …ale nie ustawiono skoku | ćwiczenie pominięte, komunikat „wybierz skok” |
-| Nie wszystkie serie ≥ górna granica | ciężar zostaje, **każda seria osobno +1 powt.**, nie mniej niż dolna i nie więcej niż górna granica (np. 9, 7 przy 8–12 → 10, 8) |
+| Nie wszystkie serie ≥ górna granica albo któraś seria była na mniejszym ciężarze | ciężar zostaje, **każda seria osobno +1 powt.**, nie mniej niż dolna i nie więcej niż górna granica (np. 9, 7 przy 8–12 → 10, 8) |
 | Najlepsza seria poniżej dolnej granicy, 1. raz | ciężar zostaje, cel jak wyżej (w praktyce dolna granica) |
 | Poniżej dolnej granicy, 2. raz z rzędu na tym samym ciężarze | cofnięcie o jeden dostępny ciężar |
 | Brak ciężaru (masa ciała, czas, dystans) / brak historii / `exclude` | pominięte |
@@ -202,6 +202,7 @@ Specyfika API, o której trzeba pamiętać:
 - **Treningi mają `routine_id: null`**, więc historia jest dopasowywana po `exercise_template_id`, a nie po routine.
 - **`PUT` nadpisuje całą listę ćwiczeń.** Dlatego `toPutBody` odsyła wszystkie ćwiczenia, z notatkami, przerwami, superseriami i rozgrzewkami.
   Pola tylko do odczytu (`index`, `title`) są usuwane, bo schemat `PUT` ich nie przewiduje.
+- **`rep_range: null` daje 400**, choć specyfikacja mówi `nullable`. Dlatego pole jest wysyłane tylko w seriach, które mają zakres.
 - **Nazwy są tylko po angielsku.** Polskie nazwy pochodzą z bundla JS hevy.com (pole `pl_title`), stąd `exercises-pl.json`.
 - Specyfikacja OpenAPI: https://api.hevyapp.com/docs/ (osadzona w `swagger-ui-init.js`).
 
@@ -218,9 +219,9 @@ Specyfika API, o której trzeba pamiętać:
 
 ## Stan i znane ograniczenia
 
-- **Pierwsza wysyłka do Hevy nie była jeszcze testowana na żywo.** Sprawdź routine w aplikacji Hevy po pierwszym zapisie.
-- **Notatki całej routine mogą zniknąć po zapisie.** `GET /routines` ich nie zwraca, więc nie da się ich odesłać. Notatki ćwiczeń są zachowywane.
-- **Rep range ustawiony w Hevy jest odsyłany bez zmian.** Nie wiadomo, czy aplikacja Hevy pokaże wtedy zakres zamiast konkretnych powtórzeń.
+- Zapis sprawdzony na żywo na testowej kopii routine: notatki ćwiczeń, superserie, przerwy, rozgrzewki, dropsety i rep range zostają bez zmian, a zmieniają się tylko ciężar i powtórzenia serii roboczych.
+- **Notatka całej routine znika po zapisie** (sprawdzone na testowej kopii). `GET /routines` jej nie zwraca, więc nie da się jej odesłać. Notatki ćwiczeń są zachowywane.
+- **Rep range ustawiony w Hevy jest odsyłany bez zmian, a aplikacja Hevy pokazuje wtedy zakres (np. „8-12 powt.”), nie cel powtórzeń.** Ciężar zmienia się normalnie. Cel powtórzeń widać tylko tutaj.
 - **Ćwiczenia bez ciężaru** (plank, cardio, masa ciała) są pomijane.
 - Gdy ćwiczenie nie wystąpiło w ostatnich 300 treningach, pokazuje „brak historii”.
 - `exercises-pl.json` zależy od wewnętrznego układu hevy.com. Gdy Hevy go zmieni, skrypt odświeżania zgłosi błąd, ale aplikacja dalej działa na zapisanym pliku.
@@ -228,7 +229,6 @@ Specyfika API, o której trzeba pamiętać:
 
 ## Do zrobienia (pomysły, kolejność według przydatności)
 
-- [ ] Pierwszy kontrolowany zapis do Hevy i weryfikacja w aplikacji: notatki, rep range, superserie.
 - [ ] Odznaczanie pojedynczych ćwiczeń przed wysyłką (dziś wysyła się całą routine).
 - [ ] Znacznik zastoju („stoi od 3 sesji”) bez wpływu na decyzję.
 - [ ] Osobny ciężar dla każdej serii, dla piramid i serii typu „top set” (powtórzenia już są liczone osobno).

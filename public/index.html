@@ -195,8 +195,8 @@ function render() {
   }).join('') || '<p class="loading">Brak routine w Hevy.</p>';
 }
 
-async function load() {
-  const res = await fetch('/api/plan');
+async function load(cached = false) {
+  const res = await fetch(cached ? '/api/plan?cached=1' : '/api/plan');
   const body = await res.json();
   if (!res.ok) { $('#plan').textContent = ''; return status(body.error, true); }
   data = body;
@@ -212,7 +212,7 @@ $('#plan').addEventListener('change', async (ev) => {
   const value = sel.value === '' ? null : sel.dataset.setting === 'range' ? sel.value.split('-').map(Number) : Number(sel.value);
   const res = await post(`/api/exercises/${sel.dataset.id}/settings`, { [sel.dataset.setting]: value });
   status(res.ok ? '' : (await res.json()).error, !res.ok);
-  await load();
+  await load(true);
 });
 
 $('#plan').addEventListener('click', async (ev) => {

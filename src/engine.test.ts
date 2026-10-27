@@ -15,6 +15,7 @@ test('not all sets at top → hold, each set +1 rep within the range', () => {
   assert.deepEqual(wr(nextTarget([[s(25, 13), s(25, 9)]], rule)), ['hold', 25, [12, 10]]);
   assert.deepEqual(wr(nextTarget([[s(12.5, 9), s(12.5, 8)]], rule)), ['hold', 12.5, [10, 9]]);
   assert.deepEqual(wr(nextTarget([[s(12.5, 9), s(12.5, 7)]], rule)), ['hold', 12.5, [10, 8]]); // set below range lifts to the bottom
+  assert.deepEqual(wr(nextTarget([[s(30, 12), s(30, 12), s(25, 12)]], rule)), ['hold', 30, [12, 12, 12]]); // last set dropped to 25 kg
 });
 test('warmups ignored; bodyweight, no history and excluded skipped', () => {
   assert.deepEqual(wr(nextTarget([[s(5, 20, 'warmup'), s(20, 9)]], rule)), ['hold', 20, [10]]);
@@ -59,6 +60,7 @@ test('PUT body rewrites only working sets and drops GET-only fields', () => {
   assert.equal('title' in curl || 'index' in curl.sets[0], false);
   assert.deepEqual(curl.sets.map((x) => [x.type, x.weight_kg, x.reps]), [['warmup', 10, 10], ['normal', 27.5, 8]]);
   assert.equal(plank.sets[0].duration_seconds, 45);
+  assert.equal('rep_range' in curl.sets[1], false); // Hevy answers 400 to rep_range: null
   assert.equal(changes(routine.exercises[0], result), true);
 });
 

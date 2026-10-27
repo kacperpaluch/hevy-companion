@@ -60,11 +60,21 @@ function ruleFor(cfg: Config, ex: HevyExercise, equipment: string | undefined) {
   return { rule, step, reps };
 }
 
-async function buildPlan() {
-  const cfg = loadConfig();
+async function fetchHevy() {
   const routines = await getRoutines();
   const ids = new Set(routines.flatMap((r) => r.exercises.map((e) => e.exercise_template_id)));
   const [history, templates] = await Promise.all([recentSessions(ids), getTemplates(ids)]);
+  return { routines, history, templates };
+}
+// Settings changes reuse the last Hevy fetch (only config changed); page loads, refresh and push always fetch fresh.
+let hevyData: ReturnType<typeof fetchHevy> | undefined;
+
+async function buildPlan(fresh = true) {
+  const cfg = loadConfig();
+  if (fresh || !hevyData) hevyData = fetchHevy();
+  let data;
+  try { data = await hevyData; } catch (e) { hevyData = undefined; throw e; }
+  const { routines, history, templates } = data;
   return routines.map((routine) => {
     const results = new Map<string, Result>();
     const exercises = routine.exercises.map((ex) => {
@@ -89,8 +99,8 @@ const readJson = async (req: IncomingMessage) => JSON.parse((await req.toArray()
 createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/') return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(html);
-    if (req.method === 'GET' && req.url === '/api/plan')
-      return json(res, 200, { steps: STEPS, ranges: RANGES, routines: (await buildPlan()).map((p) => p.view) });
+    if (req.method === 'GET' && (req.url === '/api/plan' || req.url === '/api/plan?cached=1'))
+      return json(res, 200, { steps: STEPS, ranges: RANGES, routines: (await buildPlan(!req.url.endsWith('cached=1'))).map((p) => p.view) });
 
     // JSON content-type forces a CORS preflight, so other sites can't trigger writes from your browser
     if (req.method === 'POST' && req.headers['content-type'] !== 'application/json') return json(res, 415, { error: 'content-type must be application/json' });
@@ -116,6 +126,7 @@ createServer(async (req, res) => {
       const changed = p.view.exercises.filter((e) => e.changed).length;
       if (!changed) return json(res, 200, { changed: 0 });
       await putRoutine(p.routine.id, toPutBody(p.routine, p.results));
+      hevyData = undefined; // the routine just changed in Hevy
       return json(res, 200, { changed });
     }
     json(res, 404, { error: 'not found' });

@@ -58,7 +58,8 @@ export function nextTarget(sessions: HevySet[][], rule: Rule): Result {
   const { min, max } = rule;
   const noStep = !rule.weights && !rule.increment;
 
-  if (reps.every((r) => r >= max)) {
+  // a set dropped to a lighter load doesn't count as done at the working weight
+  if (sets.every((s) => s.weight_kg === weight && s.reps! >= max)) {
     const hardest = Math.max(...sets.map((s) => s.rpe ?? 0));
     if (hardest > rule.maxRpe)
       return { action: 'hold', weight, reps: sets.map(() => max),
@@ -88,7 +89,7 @@ export function nextTarget(sessions: HevySet[][], rule: Rule): Result {
   }
 
   return { action: 'hold', weight, reps: perSet,
-    reason: `Nie wszystkie serie doszły do ${max} (${fmt(sets)}) → zostaje ${kg(weight)}, ${goal}` };
+    reason: `Nie wszystkie serie na ${kg(weight)} doszły do ${max} (${fmt(sets)}) → zostaje ${kg(weight)}, ${goal}` };
 }
 
 // target reps for the i-th working set of the routine; extra routine sets beyond last session reuse the last target
@@ -115,7 +116,8 @@ export function toPutBody(routine: Routine, results: Map<string, Result>) {
           notes: ex.notes,
           sets: ex.sets.map((s) => {
             const set = { type: s.type, weight_kg: s.weight_kg, reps: s.reps, distance_meters: s.distance_meters ?? null,
-              duration_seconds: s.duration_seconds ?? null, custom_metric: s.custom_metric ?? null, rep_range: s.rep_range ?? null };
+              duration_seconds: s.duration_seconds ?? null, custom_metric: s.custom_metric ?? null,
+              ...(s.rep_range && { rep_range: s.rep_range }) }; // Hevy rejects rep_range: null despite the spec
             return r && r.action !== 'skip' && WORKING.has(s.type) ? { ...set, weight_kg: r.weight, reps: repsAt(r, w++) } : set;
           }),
         };
