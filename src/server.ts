@@ -10,7 +10,7 @@ const html = readFileSync(new URL('../public/index.html', import.meta.url));
 // built-in exercises only; refresh with scripts/update-pl-names.mjs. Custom exercises keep the name you gave them.
 const PL_NAMES: Record<string, string> = JSON.parse(readFileSync(new URL('./exercises-pl.json', import.meta.url), 'utf8'));
 const STEPS = [1, 1.25, 2, 2.5, 5, 10];
-const RANGES = [[4, 6], [6, 8], [6, 10], [8, 12], [10, 15], [12, 15], [15, 20]];
+const RANGES = [[3, 5], [4, 6], [5, 7], [6, 8], [6, 10], [8, 10], [8, 12], [10, 15], [10, 20], [12, 15], [15, 20]];
 const EQUIPMENT_PL: Record<string, string> = { dumbbell: 'hantle', barbell: 'sztanga', machine: 'maszyna', kettlebell: 'kettlebell', plate: 'talerz' };
 
 type Ranges = [number, number, number][];
