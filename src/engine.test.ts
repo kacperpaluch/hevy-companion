@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { changes, expandWeights, nextTarget, toPutBody, type HevySet, type Result, type Routine } from './engine.ts';
+import { changes, expandWeights, nextTarget, stalled, toPutBody, type HevySet, type Result, type Routine } from './engine.ts';
 
 const rule = { min: 8, max: 12, increment: 2.5, maxRpe: 9 };
 const dumbbells = { ...rule, weights: expandWeights([[1, 10, 1], [12.5, 50, 2.5]]) };
@@ -55,7 +55,7 @@ test('PUT body rewrites only working sets and drops GET-only fields', () => {
       sets: [{ type: 'normal', weight_kg: null, reps: null, duration_seconds: 45 }] },
   ] } as unknown as Routine;
   const result = nextTarget([[s(25, 12), s(25, 12)]], rule);
-  const body = toPutBody(routine, new Map([['X', result], ['P', nextTarget([], rule)]]));
+  const body = toPutBody(routine, [result, nextTarget([], rule)]);
   const [curl, plank] = body.routine.exercises;
   assert.equal('title' in curl || 'index' in curl.sets[0], false);
   assert.deepEqual(curl.sets.map((x) => [x.type, x.weight_kg, x.reps]), [['warmup', 10, 10], ['normal', 27.5, 8]]);
@@ -70,7 +70,29 @@ test('PUT body: per-set reps; routine sets beyond last session reuse the last ta
       sets: [s(10, 10, 'warmup'), s(12.5, 9), s(12.5, 7), s(12.5, 7)] },
   ] } as unknown as Routine;
   const result = nextTarget([[s(12.5, 9), s(12.5, 7)]], rule);
-  const [ex] = toPutBody(routine, new Map([['X', result]])).routine.exercises;
+  const [ex] = toPutBody(routine, [result]).routine.exercises;
   assert.deepEqual(ex.sets.map((x) => x.reps), [10, 10, 8, 8]);
   assert.equal(changes(routine.exercises[0], nextTarget([[s(12.5, 10), s(12.5, 8)]], rule)), true);
+});
+
+test('invalid weight lists fail instead of looping or allocating huge lists', () => {
+  for (const ranges of [[], [[1, 10, 0]], [[1, 10, -1]], [[10, 1, 1]], [[-1, 10, 1]],
+    [[1, Infinity, 1]], [[1, 10, NaN]], [[1, 10]], [[1, 10, '1']], [[1, 10, 0.000001]], null]) {
+    assert.throws(() => expandWeights(ranges as any), /ciężar|Ciężar/);
+  }
+  assert.deepEqual(expandWeights([[0.1, 0.3, 0.1]]), [0.1, 0.2, 0.3]);
+});
+
+test('plateau needs three comparable sessions and no rep improvement in any set', () => {
+  const same = [s(30, 10), s(30, 9)];
+  assert.equal(stalled([same, same, same]), true);
+  assert.equal(stalled([[s(30, 9), s(30, 8)], same, same]), true);
+  assert.equal(stalled([same, same]), false);
+  assert.equal(stalled([[s(30, 11), s(30, 9)], same, same]), false);
+  assert.equal(stalled([same, [s(30, 9), s(30, 9)], same]), false);
+  assert.equal(stalled([[s(32.5, 8), s(32.5, 8)], same, same]), false);
+  assert.equal(stalled([[s(30, 10)], same, same]), false);
+  assert.equal(stalled([[s(null, 10)], [s(null, 10)], [s(null, 10)]]), false);
+  assert.equal(stalled([[s(30, null)], [s(30, null)], [s(30, null)]]), false);
+  assert.equal(stalled([[s(10, 10, 'warmup'), ...same], same, same]), true);
 });

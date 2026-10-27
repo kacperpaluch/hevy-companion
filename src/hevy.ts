@@ -1,4 +1,4 @@
-import type { HevySet, Routine } from './engine.ts';
+import { working, type HevySet, type Routine } from './engine.ts';
 
 const BASE = 'https://api.hevyapp.com/v1';
 const KEY = process.env.HEVY_API_KEY;
@@ -23,7 +23,7 @@ export type Session = { date: string; workout: string; sets: HevySet[] };
 
 // Walks workouts newest-first and keeps the latest `keep` sessions of each wanted exercise.
 // shortcut: stops after 30 pages (300 workouts); exercises not done since then show "no history".
-export async function recentSessions(ids: Set<string>, keep = 2, maxPages = 30): Promise<Map<string, Session[]>> {
+export async function recentSessions(ids: Set<string>, keep = 3, maxPages = 30): Promise<Map<string, Session[]>> {
   const out = new Map<string, Session[]>([...ids].map((id) => [id, []]));
   for (let page = 1; page <= maxPages; page++) {
     const r = await call(`/workouts?page=${page}&pageSize=10`);
@@ -31,7 +31,7 @@ export async function recentSessions(ids: Set<string>, keep = 2, maxPages = 30):
       const seen = new Set<string>(); // same exercise twice in one workout counts once
       for (const e of w.exercises) {
         const list = out.get(e.exercise_template_id);
-        if (list && list.length < keep && !seen.has(e.exercise_template_id)) {
+        if (list && list.length < keep && !seen.has(e.exercise_template_id) && working(e.sets).length) {
           seen.add(e.exercise_template_id);
           list.push({ date: w.start_time, workout: w.title, sets: e.sets });
         }

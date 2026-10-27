@@ -3,6 +3,8 @@
 .env.local
 data/config.json
 data/config.json.tmp
+data/history.json
+data/history.json.tmp
 
 # konfiguracja agentów AI (zawiera klucze API)
 .claude/

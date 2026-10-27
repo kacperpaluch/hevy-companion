@@ -4,6 +4,6 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.ts",
-    "test": "node --test src/engine.test.ts"
+    "test": "node --test src/*.test.ts"
   }
 }

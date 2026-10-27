@@ -35,8 +35,23 @@ const r2 = (x: number) => Math.round(x * 100) / 100;
 
 // [[from, to, step], ...] → sorted list of available weights, e.g. [[1, 10, 1], [12.5, 50, 2.5]]
 export function expandWeights(ranges: [number, number, number][]): number[] {
+  if (!Array.isArray(ranges) || !ranges.length) throw new Error('Lista ciężarów musi zawierać zakresy [od, do, krok]');
   const out = new Set<number>();
-  for (const [from, to, step] of ranges) for (let w = from; w <= to + 1e-9; w += step) out.add(r2(w));
+  let total = 0;
+  for (const range of ranges) {
+    if (!Array.isArray(range) || range.length !== 3 || !range.every(Number.isFinite))
+      throw new Error('Zakres ciężarów musi zawierać trzy skończone liczby: [od, do, krok]');
+    const [from, to, step] = range;
+    if (from < 0 || to < from || step <= 0) throw new Error('Zakres ciężarów wymaga: 0 ≤ od ≤ do i krok > 0');
+    const count = Math.floor((to - from + 1e-9) / step) + 1;
+    total += count;
+    if (!Number.isSafeInteger(total) || total > 10_000) throw new Error('Lista ciężarów może zawierać najwyżej 10000 pozycji');
+    for (let i = 0; i < count; i++) {
+      const weight = r2(from + i * step);
+      if (!Number.isFinite(weight)) throw new Error('Ciężar jest zbyt duży');
+      out.add(weight);
+    }
+  }
   return [...out].sort((a, b) => a - b);
 }
 const stepUp = (w: number, rule: Rule) => (rule.weights ? rule.weights.find((x) => x > w) : r2(w + rule.increment!));
@@ -46,7 +61,7 @@ const PICK_STEP = 'Wybierz skok ciężaru dla tego ćwiczenia, żeby policzyć n
 
 // sessions: this exercise's sets from past workouts, newest first.
 export function nextTarget(sessions: HevySet[][], rule: Rule): Result {
-  if (rule.exclude) return { action: 'skip', reason: 'Wykluczone w config.json' };
+  if (rule.exclude) return { action: 'skip', reason: 'Wykluczone z progresji w ustawieniach' };
   const sets = working(sessions[0] ?? []);
   if (!sets.length) return { action: 'skip', reason: 'Brak historii tego ćwiczenia' };
   if (sets.some((s) => s.weight_kg == null || s.reps == null))
@@ -99,15 +114,24 @@ export function changes(ex: HevyExercise, r: Result): boolean {
   return r.action !== 'skip' && working(ex.sets).some((s, i) => s.weight_kg !== r.weight || s.reps !== repsAt(r, i));
 }
 
+// Compare like-for-like sets; a change in load or set count is not evidence of a plateau.
+export function stalled(sessions: HevySet[][]): boolean {
+  if (sessions.length < 3) return false;
+  const [last, prev, older] = sessions.slice(0, 3).map(working);
+  return last.length > 0 && last.length === prev.length && prev.length === older.length && last.every((s, i) =>
+    s.weight_kg != null && s.weight_kg === prev[i].weight_kg && s.weight_kg === older[i].weight_kg &&
+    s.reps != null && prev[i].reps != null && older[i].reps != null && s.reps <= prev[i].reps! && prev[i].reps! <= older[i].reps!);
+}
+
 // Builds the PUT /v1/routines/{id} body. The API replaces the whole exercise list, so every exercise is sent back.
 // Only fields from PutRoutinesRequest* schemas — GET-only fields (index, title) are dropped.
-export function toPutBody(routine: Routine, results: Map<string, Result>) {
+export function toPutBody(routine: Routine, results: (Result | undefined)[]) {
   return {
     routine: {
       title: routine.title,
       folder_id: routine.folder_id,
-      exercises: routine.exercises.map((ex) => {
-        const r = results.get(ex.exercise_template_id);
+      exercises: routine.exercises.map((ex, i) => {
+        const r = results[i];
         let w = 0; // working-set index
         return {
           exercise_template_id: ex.exercise_template_id,

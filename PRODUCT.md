@@ -21,13 +21,16 @@ A private companion, not a product: it trusts Hevy for history and only adds the
 ## Operating Context
 
 - Main moment: after a workout, at a desk. Check, then send. Settings (rep range, weight step) change rarely.
-- Data comes live from the Hevy API; settings live in `data/config.json`, written from the UI.
+- Data comes live from the Hevy API; settings live in `data/config.json`, and the last send attempt per routine with before/after backups lives in `data/history.json`.
 - Interface language: Polish.
 
 ## Capabilities and Constraints
 
 - One page, vanilla HTML/CSS/JS in `public/index.html`, no build step, no dependencies.
-- Per routine: list of exercises with last session sets, current routine sets, new target, reason, and two settings (rep range, weight step). One send button per routine.
+- Per routine: exercises with last session sets, current values, new target and reason. Checkboxes select individual changes before sending.
+- Exercise settings: rep range, weight step, RPE limit and exclusion from progression.
+- A plateau marker compares three sessions at the same weights and set counts without changing progression rules.
+- The last send attempt shows its status and before/after values, with a downloadable JSON backup saved before the Hevy write.
 - Exercises without a weight step set need attention (highlighted until chosen).
 - Light and dark theme via system preference.
 - No login; single user.

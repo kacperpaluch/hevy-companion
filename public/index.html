@@ -49,7 +49,11 @@
   .ex { display:flex; align-items:center; gap:14px; min-width:0; }
   .ex img, .ex .ph { width:40px; height:40px; border-radius:3px; object-fit:cover; background:#fff; border:1px solid var(--line); flex:none; filter:grayscale(1); }
   .ex .ph { background:none; border:0; }
-  .ex[data-toggle] { cursor:pointer; }
+  .ex [data-toggle] { cursor:pointer; }
+  .ex input[type="checkbox"] { flex:none; width:17px; height:17px; margin:0; }
+  .ex .stalled { margin-top:5px; font-weight:600; color:var(--ink); }
+  .selection { margin:8px 0 0; font-size:13px; color:var(--muted); }
+  .row.unselected .tgt { opacity:.6; }
   .row:not(.cols):hover { background:var(--hover); }
   .ex div { min-width:0; }
   .ex b { display:block; font-weight:600; }
@@ -61,6 +65,7 @@
   .tgt { font-size:18px; font-weight:700; color:var(--c); display:grid; grid-template-columns:10px auto; column-gap:10px; justify-content:start; }
   .tgt::before { content:""; grid-row:1; align-self:center; width:10px; height:10px; border-radius:50%; border:2px solid var(--c); background:var(--c); box-sizing:border-box; }
   .tgt span { grid-column:2; }
+  .tgt small { grid-column:1 / -1; margin-top:4px; font-size:13px; font-weight:400; color:var(--muted); }
   .row.same .tgt, .row.skip .tgt { font-size:15px; font-weight:500; color:var(--muted); }
   .row.same .tgt::before, .row.skip .tgt::before { background:transparent; border-color:var(--off); }
   .row.skip .ex b { color:var(--muted); }
@@ -76,10 +81,17 @@
   .more dt { color:var(--muted); }
   .more dd { margin:0; }
   .settings { display:flex; flex-wrap:wrap; gap:8px 24px; }
-  .step { display:flex; align-items:center; gap:8px; color:var(--muted); }
-  .step select { border:1px solid var(--line); background:var(--card); border-radius:3px; padding:5px 8px; }
+  .step { display:flex; align-items:center; gap:8px; color:var(--muted); min-width:0; max-width:100%; }
+  .step select, .step input[type="number"] { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:3px; padding:5px 8px; font:inherit; }
+  .step input[type="number"] { width:145px; }
+  .step select { min-width:0; max-width:100%; }
   .step.need select { border:1.5px dashed var(--ink); }
   .step.need em { font-style:normal; color:var(--ink); font-weight:700; }
+  .history { margin-top:14px; font-size:14px; }
+  .history summary { cursor:pointer; font-weight:600; }
+  .history table { width:100%; border-collapse:collapse; margin:10px 0; text-align:left; }
+  .history th, .history td { padding:8px; border-bottom:1px solid var(--line); vertical-align:top; overflow-wrap:anywhere; }
+  .history a { color:var(--reps); }
 
   @media (max-width:760px) {
     .band small { display:none; }
@@ -100,6 +112,7 @@
   <button id="refresh">Odśwież</button>
 </div></header>
 <main>
+  <p class="msg">Uwaga: wysłanie zmian usuwa notatkę całej routine w Hevy. Notatki poszczególnych ćwiczeń zostają zachowane.</p>
   <div id="status" role="status" aria-live="polite"></div>
   <div id="plan" class="loading">Ładuję dane z Hevy…</div>
 </main>
@@ -114,14 +127,28 @@ const lines = (xs) => xs.map((x) => `<span>${esc(x)}</span>`).join('');
 const sets = (ss) => ss.map(set).join(', ') || '–';
 const day = (d) => new Date(d).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
 let data = { steps: [], ranges: [], routines: [] };
+let loadId = 0, busy = false;
 const open = new Set(); // expanded rows, kept across re-renders
+const omitted = new Set();
+const selected = (r) => r.exercises.flatMap((e, i) => e.changed && !omitted.has(`${r.id}:${i}`) ? [i] : []);
 
-const STATES = { up: ['var(--up)', 'więcej kg'], reps: ['var(--reps)', 'nowy cel powtórzeń'], down: ['var(--down)', 'cofnięty ciężar'],
+const STATES = { up: ['var(--up)', 'więcej kg w planie'], reps: ['var(--reps)', 'nowy cel powtórzeń'], down: ['var(--down)', 'mniej kg w planie'],
+  mixed: ['var(--reps)', 'zmiana ciężarów'],
   same: ['var(--off)', 'bez zmian'], skip: ['var(--off)', 'pominięte'] };
-const state = (e) => e.result.action === 'skip' ? 'skip' : !e.changed ? 'same'
-  : { increase: 'up', decrease: 'down' }[e.result.action] ?? 'reps';
+function state(e) {
+  if (e.result.action === 'skip') return 'skip';
+  if (!e.changed) return 'same';
+  const up = e.current.some((s) => e.result.weight > (s.weight_kg ?? 0));
+  const down = e.current.some((s) => e.result.weight < (s.weight_kg ?? 0));
+  return up && down ? 'mixed' : down ? 'down' : up ? 'up' : 'reps';
+}
 
 function status(text, err) { $('#status').innerHTML = text ? `<div class="msg ${err ? 'err' : ''}">${esc(text)}</div>` : ''; }
+function setBusy(value) {
+  busy = value;
+  $('#plan').inert = value;
+  $('#refresh').disabled = value;
+}
 
 function picker(id, setting, label, { value, fallback }, choices, need) {
   const opts = [['', fallback ? `domyślny: ${fallback}` : '— wybierz —'], ...choices];
@@ -146,11 +173,13 @@ function summary(e) {
 }
 
 function settings(e) {
-  if (!e.step) return '';
-  const stepChoices = [...(e.step.value === 'custom' ? [['custom', 'własna lista (config.json)']] : []), ...data.steps.map((n) => [n, `co ${kg(n)}`])];
+  const stepChoices = [...(e.step?.value === 'custom' ? [['custom', 'własna lista (config.json)']] : []), ...data.steps.map((n) => [n, `co ${kg(n)}`])];
   return `<div class="settings">
-    ${picker(e.id, 'range', 'Zakres powtórzeń', e.reps, data.ranges.map(([a, b]) => [`${a}-${b}`, `${a}–${b}`]), false)}
-    ${picker(e.id, 'increment', 'Skok ciężaru', e.step, stepChoices, needsStep(e))}
+    ${e.step ? picker(e.id, 'range', 'Zakres powtórzeń', e.reps, data.ranges.map(([a, b]) => [`${a}-${b}`, `${a}–${b}`]), false)
+      + picker(e.id, 'increment', 'Skok ciężaru', e.step, stepChoices, needsStep(e)) : ''}
+    <label class="step">Limit RPE <input type="number" min="1" max="10" step="any" data-id="${esc(e.id)}" data-setting="maxRpe"
+      value="${esc(e.rpe.value)}" placeholder="domyślnie ${esc(e.rpe.fallback)}"></label>
+    <label class="step"><input type="checkbox" data-id="${esc(e.id)}" data-setting="exclude" ${e.excluded ? 'checked' : ''}> Wyklucz z progresji</label>
   </div>`;
 }
 
@@ -159,16 +188,32 @@ function row(e, key) {
   // one line per working set in the routine, as toPutBody writes it (repsAt in engine.ts); warm-ups are left alone
   const target = st === 'skip' ? ['pomijam']
     : Array.from({ length: Math.max(1, e.current.length) }, (_, i) => `${x.reps[Math.min(i, x.reps.length - 1)]} × ${kg(x.weight)}`);
-  return `<div class="row ${st}" style="--c:${STATES[st][0]}">
-    <div class="ex" data-toggle="${esc(key)}">${e.thumb ? `<img src="${esc(e.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'}<div><b>${esc(e.title)}</b><small>${esc(outcome(x.reason))}</small></div></div>
-    <div class="last">${e.last ? lines(e.last.sets.filter((s) => s.type !== 'warmup').map(set)) + `<small>${day(e.last.date)}</small>` : '<span>–</span>'}</div>
-    <div class="tgt">${lines(target)}</div>
+  return `<div class="row ${st} ${omitted.has(key) ? 'unselected' : ''}" style="--c:${STATES[st][0]}">
+    <div class="ex"><input type="checkbox" data-select="${esc(key)}" aria-label="Wyślij zmianę: ${esc(e.title)}" ${e.changed && !omitted.has(key) ? 'checked' : ''} ${e.changed ? '' : 'disabled'}>
+      ${e.thumb ? `<img src="${esc(e.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'}<div data-toggle="${esc(key)}"><b>${esc(e.title)}</b><small>${esc(outcome(x.reason))}</small>
+      ${e.stalled ? '<small class="stalled" title="Te same ciężary i liczba serii; żadna seria nie poprawiła liczby powtórzeń. Informacja nie zmienia reguł progresji.">Brak poprawy w ostatnich 3 treningach</small>' : ''}</div></div>
+    <div class="last">${e.last ? lines(e.last.sets.filter((s) => s.type === 'normal' || s.type === 'failure').map(set)) + `<small>${day(e.last.date)}</small>` : '<span>–</span>'}</div>
+    <div class="tgt">${lines(target)}${e.changed ? `<small>Teraz w Hevy: ${esc(sets(e.current))}</small>${omitted.has(key) ? '<small>Nie zostanie wysłane</small>' : ''}` : ''}</div>
     <button class="open ${needsStep(e) ? 'need' : ''}" data-toggle="${esc(key)}" aria-expanded="${expanded}">${needsStep(e) ? ALERT : ''}${esc(summary(e) || 'Szczegóły')}${CHEVRON}</button>
     ${expanded ? `<div class="more">
       <dl><dt>Dlaczego</dt><dd>${esc(x.reason)}${st === 'same' && x.action !== 'skip' ? ' (routine już ma ten cel)' : ''}</dd>
-        <dt>Teraz w Hevy</dt><dd>${esc(sets(e.current))}</dd></dl>
+        <dt>Teraz w Hevy</dt><dd>${esc(sets(e.current))}</dd>
+        ${e.stalled ? `<dt>Ostatnie 3 treningi</dt><dd>${e.recent.slice(0, 3).map((s) => `${esc(day(s.date))}: ${esc(sets(s.sets.filter((x) => x.type === 'normal' || x.type === 'failure')))}`).join('<br>')}</dd>` : ''}</dl>
       ${settings(e)}</div>` : ''}
   </div>`;
+}
+
+function pushHistory(r) {
+  const h = r.history;
+  if (!h) return '';
+  const confirmed = h.status === 'confirmed';
+  return `<details class="history"><summary>Ostatnia ${confirmed ? 'wysyłka' : 'próba wysyłki'}: ${esc(new Date(h.date).toLocaleString('pl-PL'))} — ${confirmed ? 'zapis potwierdzony' : 'wynik niepotwierdzony'}</summary>
+    ${confirmed ? '' : '<p>Sprawdź aktualny plan w Hevy. Po przerwaniu połączenia zmiany mogły zostać zapisane.</p>'}
+    <table><thead><tr><th scope="col">Ćwiczenie</th><th scope="col">Było</th><th scope="col">${confirmed ? 'Zapisano' : 'Wysyłano'}</th></tr></thead>
+      <tbody>${h.changes.map((c) => `<tr><td>${esc(c.title)}</td><td>${esc(sets(c.before))}</td><td>${esc(sets(c.after))}</td></tr>`).join('')}</tbody></table>
+    <a href="/api/routines/${encodeURIComponent(r.id)}/backup" download>Pobierz kopię planu sprzed zapisu i podsumowanie zmian</a>
+    <p>Kopia nie zawiera notatki całej routine — Hevy nie udostępnia jej przez API.</p>
+  </details>`;
 }
 
 function render() {
@@ -177,7 +222,8 @@ function render() {
   $('#plan').className = '';
   $('#plan').innerHTML = data.routines.map((r, i) => {
     const states = r.exercises.map(state);
-    const n = r.exercises.filter((e) => e.changed).length;
+    const total = r.exercises.filter((e) => e.changed).length;
+    const n = selected(r).length;
     const counts = Object.keys(STATES).filter((k) => states.includes(k))
       .map((k) => `<span style="--c:${STATES[k][0]}">${states.filter((s) => s === k).length} ${STATES[k][1]}</span>`).join('');
     return `<section class="routine">
@@ -185,37 +231,74 @@ function render() {
           <h2>${esc(r.title)}</h2>
           <div class="stripe" aria-hidden="true">${r.exercises.map((e, j) => `<i style="--c:${STATES[states[j]][0]}" title="${esc(e.title)}: ${STATES[states[j]][1]}"></i>`).join('')}</div>
           <div class="legend">${counts}</div>
+          <p class="selection">Wybrano ${n} z ${total} zmian do wysłania</p>
         </div>
-        <button class="send" data-push="${i}" ${n ? '' : 'disabled'}>${n ? `Wyślij ${n} ${n === 1 ? 'zmianę' : n < 5 ? 'zmiany' : 'zmian'} do Hevy` : 'Brak zmian'}</button></div>
+        <button class="send" data-push="${i}" ${n ? '' : 'disabled'}>${n ? `Wyślij ${n} ${n === 1 ? 'zmianę' : n < 5 ? 'zmiany' : 'zmian'} do Hevy` : total ? 'Wybierz zmiany' : 'Brak zmian'}</button></div>
       <div class="table">
         <div class="row cols" aria-hidden="true"><span>Ćwiczenie</span><span>Ostatnio</span><span>Następny cel</span><span>Ustawienia</span></div>
         ${r.exercises.map((e, j) => row(e, `${r.id}:${j}`)).join('')}
       </div>
+      ${pushHistory(r)}
     </section>`;
   }).join('') || '<p class="loading">Brak routine w Hevy.</p>';
 }
 
 async function load(cached = false) {
-  const res = await fetch(cached ? '/api/plan?cached=1' : '/api/plan');
-  const body = await res.json();
-  if (!res.ok) { $('#plan').textContent = ''; return status(body.error, true); }
-  data = body;
-  render();
+  const id = ++loadId;
+  try {
+    const res = await fetch(cached ? '/api/plan?cached=1' : '/api/plan');
+    const body = await res.json();
+    if (id !== loadId) return false;
+    if (!res.ok) throw new Error(body.error);
+    for (const r of body.routines) {
+      if (data.routines.find((old) => old.id === r.id)?.fingerprint !== r.fingerprint)
+        r.exercises.forEach((_, i) => omitted.delete(`${r.id}:${i}`));
+    }
+    data = body;
+    render();
+    return true;
+  } catch (e) {
+    if (id !== loadId) return false;
+    $('#plan').className = '';
+    $('#plan').textContent = 'Nie udało się pobrać planu. Kliknij „Odśwież”, aby spróbować ponownie.';
+    status(`Błąd pobierania planu: ${e.message}`, true);
+    return false;
+  }
 }
 
 const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
 $('#plan').addEventListener('change', async (ev) => {
+  if (busy) return;
+  const choice = ev.target.closest('[data-select]');
+  if (choice) {
+    choice.checked ? omitted.delete(choice.dataset.select) : omitted.add(choice.dataset.select);
+    render();
+    document.querySelector(`input[data-select="${CSS.escape(choice.dataset.select)}"]`)?.focus();
+    return;
+  }
   const sel = ev.target.closest('[data-setting]');
   if (!sel) return;
+  setBusy(true);
+  ++loadId; // an earlier read must not replace the preview during a write
   sel.disabled = true;
-  const value = sel.value === '' ? null : sel.dataset.setting === 'range' ? sel.value.split('-').map(Number) : Number(sel.value);
-  const res = await post(`/api/exercises/${sel.dataset.id}/settings`, { [sel.dataset.setting]: value });
-  status(res.ok ? '' : (await res.json()).error, !res.ok);
-  await load(true);
+  const value = sel.dataset.setting === 'exclude' ? sel.checked : sel.value === '' ? null : sel.dataset.setting === 'range' ? sel.value.split('-').map(Number) : Number(sel.value);
+  status('');
+  try {
+    const res = await post(`/api/exercises/${sel.dataset.id}/settings`, { [sel.dataset.setting]: value });
+    if (!res.ok) throw new Error((await res.json()).error);
+    await load(true);
+  } catch (e) {
+    await load(true);
+    status(`Nie udało się potwierdzić zapisu ustawień: ${e.message}. Odśwież plan i sprawdź ustawienia.`, true);
+  } finally {
+    sel.disabled = false;
+    setBusy(false);
+  }
 });
 
 $('#plan').addEventListener('click', async (ev) => {
+  if (busy) return;
   const toggle = ev.target.closest('[data-toggle]');
   if (toggle) {
     const key = toggle.dataset.toggle;
@@ -227,14 +310,30 @@ $('#plan').addEventListener('click', async (ev) => {
   const btn = ev.target.closest('[data-push]');
   if (!btn) return;
   const r = data.routines[btn.dataset.push];
+  const positions = selected(r);
+  if (!positions.length) return;
+  if (!confirm(`Wysłać zaznaczone zmiany planu „${r.title}” (${positions.length})?\n\nZapis usuwa notatkę całej routine w Hevy. Notatki ćwiczeń zostają zachowane.`)) return;
+  setBusy(true);
+  ++loadId;
+  const label = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Wysyłam…';
-  const res = await post(`/api/routines/${r.id}/push`, { fingerprint: r.fingerprint });
-  const body = await res.json();
-  await load();
-  status(res.ok ? `„${r.title}”: zaktualizowano ${body.changed} ćwiczeń w Hevy.` : body.error, !res.ok);
+  try {
+    const res = await post(`/api/routines/${r.id}/push`, { fingerprint: r.fingerprint, acknowledgeNoteLoss: true, selected: positions });
+    const body = await res.json();
+    const refreshed = await load();
+    if (!res.ok) status(body.error, true);
+    else status(`„${r.title}”: zaktualizowano ${body.changed} ćwiczeń w Hevy.${body.historyWarning ? ' ' + body.historyWarning : ''}${refreshed ? '' : ' Zapis potwierdzony, ale nie udało się pobrać nowego planu. Kliknij „Odśwież”.'}`, !refreshed || !!body.historyWarning);
+  } catch (e) {
+    $('#plan').textContent = 'Nieznany wynik wysyłki. Kliknij „Odśwież” i sprawdź plan przed kolejną wysyłką.';
+    status(`Nie udało się potwierdzić wysyłki: ${e.message}. Hevy mogło już zapisać zmiany.`, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+    setBusy(false);
+  }
 });
-$('#refresh').addEventListener('click', () => { status(''); $('#plan').className = 'loading'; $('#plan').textContent = 'Ładuję dane z Hevy…'; load(); });
+$('#refresh').addEventListener('click', () => { if (busy) return; status(''); $('#plan').className = 'loading'; $('#plan').textContent = 'Ładuję dane z Hevy…'; load(); });
 load();
 </script>
 </body>
