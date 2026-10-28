@@ -16,7 +16,7 @@ krokach. Każdy krok porównujemy z poprzednim raportem backtestu. Na końcu REA
   potem funkcje e1RM, na końcu RPE. Twoja historia nie ma jeszcze RPE, więc po kroku z RPE raport backtestu ma być
   **identyczny** jak po poprawce. To mocne sprawdzenie, że bez RPE nic się nie zmieniło.
 - **Format powodu:** decyzja zawsze po ostatnim „→”, bo tak wiersz w UI wyciąga krótki opis (`public/index.html:161`).
-- **Raporty backtestu poza repo.** Zawierają Twoje dane treningowe, więc trafiają do katalogu tymczasowego, nie do gita.
+- **Raporty backtestu poza repo.** Zawierają Twoje dane treningowe, więc trafiają do `data/backtest-*.txt` (w `.gitignore`).
 
 ## Graf zależności
 ```
@@ -32,7 +32,7 @@ T3 i T4 są niezależne (T4 to nowe funkcje bez użycia), ale robimy je po kolei
 ## Lista zadań
 ### Faza 1: backtest
 - [x] T1: `replay()` i ocena porównań (S)
-- [ ] T2: skrypt `npm run backtest` (S)
+- [x] T2: skrypt `npm run backtest` (S)
 - [ ] **Checkpoint A:** raport bazowy zapisany, przejrzany z Tobą
 
 ### Faza 2: silnik

@@ -9,7 +9,7 @@ const CONFIG_PATH = process.env.CONFIG_PATH ?? 'data/config.json';
 const HISTORY_PATH = join(dirname(CONFIG_PATH), 'history.json');
 const html = readFileSync(new URL('../public/index.html', import.meta.url));
 // built-in exercises only; refresh with scripts/update-pl-names.mjs. Custom exercises keep the name you gave them.
-const PL_NAMES: Record<string, string> = JSON.parse(readFileSync(new URL('./exercises-pl.json', import.meta.url), 'utf8'));
+export const PL_NAMES: Record<string, string> = JSON.parse(readFileSync(new URL('./exercises-pl.json', import.meta.url), 'utf8'));
 const STEPS = [1, 1.25, 2, 2.5, 5, 10];
 const RANGES = [[3, 5], [4, 6], [5, 7], [6, 8], [6, 10], [8, 10], [8, 12], [10, 15], [10, 20], [12, 15], [15, 20]];
 const EQUIPMENT_PL: Record<string, string> = { dumbbell: 'hantle', barbell: 'sztanga', machine: 'maszyna', kettlebell: 'kettlebell', plate: 'talerz' };
@@ -24,7 +24,7 @@ function writeJson(path: string, value: unknown) {
   writeFileSync(path + '.tmp', JSON.stringify(value, null, 2) + '\n');
   renameSync(path + '.tmp', path); // atomic: a crash mid-write can't leave broken JSON
 }
-function loadConfig(): Config {
+export function loadConfig(): Config {
   const c = readRaw();
   return {
     defaults: { min: 8, max: 12, maxRpe: 9, ...c.defaults },
@@ -56,7 +56,7 @@ function saveExercise(id: string, patch: { increment?: number | null; range?: nu
 }
 
 // precedence: config.json per exercise > rep range set in Hevy > defaults; weights: exercise list > exercise increment > equipment list
-function ruleFor(cfg: Config, ex: HevyExercise, equipment: string | undefined) {
+export function ruleFor(cfg: Config, ex: HevyExercise, equipment: string | undefined) {
   const range = working(ex.sets).find((s) => s.rep_range?.start && s.rep_range?.end)?.rep_range;
   const own = cfg.exercises[ex.exercise_template_id] ?? {};
   const listed = equipment ? cfg.equipment[equipment] : undefined;

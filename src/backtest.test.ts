@@ -25,3 +25,17 @@ test('steps read oldest first; the newest session has no next and no mark', () =
   assert.deepEqual(summary(steps), { '=': 2, '↑': 0, '↓': 0, '·': 0 });
   assert.deepEqual(replay([], rule), []);
 });
+
+test('report: one line per session, rule header, per-exercise summary', async () => {
+  const { report } = await import('./backtest.ts');
+  const text = report('Wyciskanie nogami', rule, replay([[s(80, 12), s(80, 11)], [s(80, 11), s(80, 10)]], rule));
+  assert.deepEqual(text.split('\n').map((l) => l.replace(/ +/g, ' ')), [
+    '## Wyciskanie nogami · 8–12 · co 5 kg',
+    ' 80×11 80×10 → hold 80 kg × 12/11 → 80×12 80×11 =',
+    ' 80×12 80×11 → hold 80 kg × 12/12',
+    ' podsumowanie: = 1 · ↑ 0 · ↓ 0 · pominięte 0',
+  ]);
+  const dumbbells = { min: 6, max: 10, maxRpe: 9, weights: [10, 12.5] };
+  assert.match(report('Hantle', dumbbells, replay([[{ ...s(12.5, 9), rpe: 8 }]], dumbbells)), /lista ciężarów\n +12,5×9@8 +→ hold 12,5 kg × 10$/m);
+  assert.match(report('Plank', { min: 8, max: 12, maxRpe: 9 }, []), /· bez skoku\n +brak historii/);
+});

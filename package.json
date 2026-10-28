@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.ts",
-    "test": "node --test src/*.test.ts"
+    "test": "node --test src/*.test.ts",
+    "backtest": "node --env-file-if-exists=.env src/backtest.ts"
   }
 }

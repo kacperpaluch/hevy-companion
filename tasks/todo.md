@@ -17,14 +17,14 @@ do tej sesji → następna sesja → znacznik `=`/`↑`/`↓`/`·`, plus podsumo
 
 **Pliki:** `src/backtest.ts`, `src/backtest.test.ts` · **Zależy od:** — · **Rozmiar:** S
 
-### - [ ] T2: skrypt `npm run backtest`
+### - [x] T2: skrypt `npm run backtest`
 Uruchomienie z terminala: pobiera routine i historię, bierze reguły z serwera, drukuje raport z SPEC.md.
 
 **Akceptacja**
-- [ ] `server.ts` eksportuje `loadConfig` i `ruleFor` bez zmiany zachowania (istniejące testy przechodzą).
-- [ ] Część z siecią jest w `if (import.meta.main)` z dynamicznym importem `hevy.ts`/`server.ts`. Historia: `recentSessions(ids, 50)`.
-- [ ] Skrypt `"backtest": "node --env-file-if-exists=.env src/backtest.ts"` w `package.json`.
-- [ ] Brak jakiegokolwiek `PUT`. Dwa uruchomienia pod rząd dają identyczny wynik.
+- [x] `server.ts` eksportuje `loadConfig` i `ruleFor` bez zmiany zachowania (istniejące testy przechodzą).
+- [x] Część z siecią jest w `if (import.meta.main)` z dynamicznym importem `hevy.ts`/`server.ts`. Historia: `recentSessions(ids, 50)`.
+- [x] Skrypt `"backtest": "node --env-file-if-exists=.env src/backtest.ts"` w `package.json`.
+- [x] Brak jakiegokolwiek `PUT`. Dwa uruchomienia pod rząd dają identyczny wynik.
 
 **Weryfikacja ręczna:** `npm run backtest > $TMP/b1.txt && npm run backtest > $TMP/b2.txt && diff $TMP/b1.txt $TMP/b2.txt` (pusto);
 raport zgadza się z porównaniem z rozmowy (np. wyciskanie nad głowę: zalecenie 7 kg, a Ty zostałeś przy 6 kg, więc `↓`).
@@ -32,7 +32,7 @@ raport zgadza się z porównaniem z rozmowy (np. wyciskanie nad głowę: zalecen
 
 ### - [ ] Checkpoint A
 - [ ] `npm test` zielone
-- [ ] Raport bazowy zapisany poza repo (`$TMP/baseline.txt`)
+- [ ] Raport bazowy zapisany w `data/backtest-baseline.txt` (poza gitem)
 - [ ] Raport przejrzany z Tobą, zanim ruszymy silnik
 
 ## Faza 2: silnik
@@ -45,8 +45,8 @@ Reguła 3 ze specu: ciężar zostaje W; serie na W +1; serie lżejsze = najmniej
 - [ ] Istniejący test „last set dropped to 25 kg” (30×12, 30×12, 25×12 → 30 × 12/12/12) przechodzi bez zmian.
 - [ ] Powód dla tego przypadku mówi, że lżejsze serie dostały cel z serii na W.
 
-**Weryfikacja ręczna:** `diff $TMP/baseline.txt <(npm run backtest)`: różnice **tylko** w sesjach z seriami na różnych ciężarach.
-Potem zapisz nowy raport jako `$TMP/after-t3.txt`.
+**Weryfikacja ręczna:** `diff data/backtest-baseline.txt <(npm run -s backtest)`: różnice **tylko** w sesjach z seriami na różnych ciężarach.
+Potem zapisz nowy raport jako `data/backtest-after-t3.txt`.
 **Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** Checkpoint A · **Rozmiar:** XS
 
 ### - [ ] T4: funkcje e1RM
@@ -70,7 +70,7 @@ hamulec `maxRpe` bez zmian.
 - [ ] Gdy RPE wpłynęło na decyzję, powód to mówi. Tekst po ostatnim „→” to decyzja (test).
 - [ ] Dotychczasowe testy przechodzą bez zmian oczekiwań.
 
-**Weryfikacja ręczna:** `diff $TMP/after-t3.txt <(npm run backtest)` jest **pusty** (Twoja historia nie ma RPE).
+**Weryfikacja ręczna:** `diff data/backtest-after-t3.txt <(npm run -s backtest)` jest **pusty** (Twoja historia nie ma RPE).
 **Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** T4 · **Rozmiar:** S
 
 ### - [ ] Checkpoint B

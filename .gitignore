@@ -5,6 +5,7 @@ data/config.json
 data/config.json.tmp
 data/history.json
 data/history.json.tmp
+data/backtest-*.txt
 
 # konfiguracja agentów AI (zawiera klucze API)
 .claude/
