@@ -1,6 +1,6 @@
 # Spec: Hevy Companion
 
-Status: **zaakceptowany** · 2026-10-28 · plan: `tasks/plan.md`
+Status: **zaimplementowany** (T1–T7) · 2026-10-28 · plan: `tasks/plan.md`
 
 ## Cel
 

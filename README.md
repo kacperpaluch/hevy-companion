@@ -3,7 +3,10 @@
 [![Docker Hub](https://img.shields.io/docker/pulls/kpa90/hevy-companion?logo=docker)](https://hub.docker.com/r/kpa90/hevy-companion)
 
 Prywatna aplikacja do prowadzenia progresji na siłowni na bazie danych z [Hevy](https://hevy.com).
-Wzorowana na [periodize.fit](https://periodize.fit), ale na razie robi tylko **podwójną progresję (double progression)**.
+Robi **podwójną progresję (double progression)** zgodną z [ARF](https://arf.edu.pl/jak-progresowac-na-silowni/),
+z elementami algorytmu [Gravl](https://gravl.ai/blog/how-gravl-algorithm-works): RPE wpisane w Hevy liczy się jako zapas
+powtórzeń, a szacowany ciężar maksymalny (e1RM) pozwala na większy skok, gdy było wyraźnie łatwo.
+Zasady można sprawdzić na własnej historii z Hevy poleceniem `npm run backtest`.
 
 Co robi:
 1. Pobiera z Hevy Twoje routine'y i historię treningów.
@@ -68,6 +71,7 @@ Plik działa też jako stack w Portainerze (wszystkie zmienne są w `environment
 echo "HEVY_API_KEY=twój-klucz" > .env
 npm start     # node --env-file-if-exists=.env src/server.ts
 npm test      # testy silnika, API i interfejsu (bez połączenia z Hevy)
+npm run backtest   # raport: co algorytm zaleciłby po każdym Twoim treningu (tylko odczyt z Hevy)
 ```
 
 Nie ma `npm install`, bo projekt nie ma żadnych zależności. Własny obraz: `docker build -t hevy-companion .`
@@ -94,11 +98,12 @@ Przy każdym ćwiczeniu:
 - **Ostatnio:** serie z ostatniego treningu z tym ćwiczeniem, jedna linia na serię, i jego data.
 - **Następny cel:** co zostanie zapisane w routine, jedna linia na serię roboczą. Kolor kropki oznacza stan jak na pasku.
 - **Teraz w Hevy:** przy zmienionym celu pokazuje obecne wartości planu bez rozwijania szczegółów.
-- **Pod nazwą:** krótka decyzja, np. „zostaje 25 kg, cel 12 / 10 powt.”.
+- **Pod nazwą:** krótka decyzja, np. „zostaje 25 kg, cel 12 / 10 powt. (+1 powt. w serii 2)”.
 - **Ustawienia:** skrót zakresu i skoku (np. `8–12 · co 5 kg`). Kliknięcie (albo kliknięcie nazwy ćwiczenia) rozwija pełne uzasadnienie,
   „Teraz w Hevy” i listy **Zakres powtórzeń** oraz **Skok ciężaru**. Hantle mają domyślną listę ciężarów; maszyny i reszta wymagają
   wyboru skoku, a do tego czasu wiersz pokazuje „Ustaw skok”.
 - **Limit RPE:** w szczegółach ćwiczenia można ustawić wartość od 1 do 10. Puste pole przywraca domyślny limit z konfiguracji (zwykle 9).
+  Serię z RPE powyżej limitu traktujemy jako zrobioną bez zapasu, więc ciężar nie rośnie. RPE wpisuj w Hevy przy każdej serii.
 - **Wyklucz z progresji:** trwałe wyłączenie ćwiczenia w ustawieniach. Można je ponownie włączyć w tym samym miejscu,
   także gdy ćwiczenie nie ma historii. Wykluczenie i RPE są wspólne dla danego ćwiczenia we wszystkich routine'ach.
 - **Zastój:** komunikat „Brak poprawy w ostatnich 3 treningach” pojawia się, gdy trzy ostatnie sesje mają tę samą liczbę serii roboczych
@@ -116,23 +121,90 @@ Jeśli połączenie urwie się podczas wysyłki, Hevy mogło już zapisać zmian
 
 Liczone są tylko serie robocze (`normal`, `failure`); rozgrzewki (`warmup`) i dropsety są pomijane.
 Decyzja opiera się na **ostatniej sesji** danego ćwiczenia (przy cofaniu ciężaru także na przedostatniej).
+**W** to najcięższy ciężar w ostatniej sesji.
+
+**Zapas z RPE:** powtórzenia efektywne = powtórzenia + (10 − RPE). Na przykład 10 powt. przy RPE 8 liczy się jak 12.
+Seria bez RPE nie ma zapasu, więc liczy się tak, jak została zrobiona.
 
 | Sytuacja | Decyzja |
 |---|---|
-| Wszystkie serie ≥ górna granica zakresu, wszystkie na tym samym (najwyższym) ciężarze | następny dostępny ciężar, cel = dolna granica |
+| Wszystkie serie na W i każda ma powtórzenia efektywne ≥ górna granica | następny dostępny ciężar, cel = dolna granica |
+| …i któraś seria miała zapas z RPE | nowy ciężar = większy z: następny krok albo ciężar na `dolna granica + 2` powt. z e1RM, zaokrąglony w dół do dostępnych. RPE podnosi e1RM najwyżej o 10% |
 | …ale któraś seria miała RPE > `maxRpe` (domyślnie 9) | ciężar zostaje, cel = górna granica (za mały zapas) |
 | …ale to największy dostępny ciężar | ciężar zostaje |
 | …ale nie ustawiono skoku | ćwiczenie pominięte, komunikat „wybierz skok” |
-| Nie wszystkie serie ≥ górna granica albo któraś seria była na mniejszym ciężarze | ciężar zostaje, **każda seria osobno +1 powt.**, nie mniej niż dolna i nie więcej niż górna granica (np. 9, 7 przy 8–12 → 10, 8) |
+| Nie wszystkie serie doszły do górnej granicy | ciężar zostaje, **+1 powt. tylko w najsłabszej serii** (przy remisie w pierwszej z nich), każda seria co najmniej dolna granica, najwyżej górna (9/8/7 → 9/8/8; 11/10 → 11/11) |
+| Któraś seria była na mniejszym ciężarze niż W | lżejsza seria liczy się jak najsłabsza seria na W, potem drabinka jak wyżej (70×12, 70×11, 80×10 → 80 kg × 11/10/10) |
 | Najlepsza seria poniżej dolnej granicy, 1. raz | ciężar zostaje, cel jak wyżej (w praktyce dolna granica) |
 | Poniżej dolnej granicy, 2. raz z rzędu na tym samym ciężarze | cofnięcie o jeden dostępny ciężar |
 | Brak ciężaru (masa ciała, czas, dystans) / brak historii / `exclude` | pominięte |
 
+**e1RM** (szacowany ciężar na 1 powtórzenie): Brzycki do 10 powt. (`w × 36 / (37 − r)`), Epley od 11 (`w × (1 + r / 30)`).
+Oba wzory dają ten sam wynik przy 10 powt. Powyżej 15 powt. szacunek przestaje rosnąć.
+
+Przykłady (zakres 8–12, skok 5 kg):
+
+| Ostatnia sesja | Decyzja |
+|---|---|
+| 80×12, 80×12 | 85 kg × 8/8 |
+| 80×12 @RPE 6, 80×12 @RPE 6 | 90 kg × 8/8 (e1RM 120 kg) |
+| 80×10 @RPE 8, 80×10 @RPE 8 | 85 kg × 8/8 (10 + 2 zapasu = 12) |
+| 80×12 @RPE 10, 80×12 @RPE 9 | 80 kg × 12/12 (hamulec `maxRpe`) |
+| 80×15, 80×15 (bez RPE) | 85 kg × 8/8 (bez RPE zawsze jeden krok) |
+
 Ciężar w routine jest ustawiany na **wszystkie serie robocze jednakowo**, a powtórzenia **dla każdej serii osobno**.
-Decyzja o ciężarze jest zgodna z [ARF](https://arf.edu.pl/jak-progresowac-na-silowni/): więcej kg dopiero, gdy wszystkie serie dojdą do górnej granicy.
 Gdy routine ma więcej serii roboczych niż ostatni trening, dodatkowe serie dostają cel ostatniej serii.
-Zasady były porównane z Periodize: na tych samych danych
-wyniki były identyczne w 9 na 9 ćwiczeniach; od tamtej pory powtórzenia są liczone dla każdej serii osobno, a ciężary są dopasowywane do ciężarów faktycznie dostępnych na Twojej siłowni.
+
+Skąd te reguły:
+- **[ARF](https://arf.edu.pl/jak-progresowac-na-silowni/):** więcej kg dopiero, gdy wszystkie serie dojdą do górnej granicy.
+  Za postęp wystarczy jedno powtórzenie w jednej serii. Jedna słabsza sesja to jeszcze nie powód do cofnięcia.
+- **[Gravl](https://gravl.ai/blog/how-gravl-algorithm-works):** e1RM, ocena wysiłku (tu z RPE), limit +10% na trening.
+  Brak oceny traktujemy jak „ciężko”, czyli jak zwykłą podwójną progresję.
+- **Backtest na własnej historii:** drabinka „+1 w najsłabszej serii” trafiała w kolejny trening 12 razy na 38,
+  a wcześniejsza „+1 w każdej serii” tylko 3 razy na 38.
+
+---
+
+## Backtest (`npm run backtest`)
+
+Odtwarza decyzje algorytmu na Twojej historii z Hevy: dla każdej sesji ćwiczenia pokazuje, co zaleciłby algorytm
+i co zrobiłeś w następnym treningu. **Tylko odczyt**, nic nie trafia do Hevy.
+
+```
+## Wyciskanie nogami (maszyna) · 8–12 · bez skoku
+  70×12 70×11 80×10      → hold 80 kg × 11/10/10      → 70×14 70×13 70×12      ↓
+  90×9 90×8 90×7         → hold 90 kg × 9/8/8         → 80×11 80×10 80×10      ↓
+  podsumowanie: = 1 · ↑ 2 · ↓ 3 · pominięte 2
+```
+
+- `=` trafione: następny trening na zaleconym ciężarze i każda seria ≥ celu.
+- `↑` zrobiłeś cięższy ciężar, niż zalecał algorytm.
+- `↓` lżejszy ciężar albo któraś seria poniżej celu.
+- `·` brak zalecenia (pominięte ćwiczenie).
+
+Raport jest powtarzalny, więc zmianę reguł sprawdzisz porównaniem raportów z przed i po zmianie:
+
+```bash
+npm run -s backtest > data/backtest-przed.txt
+# … zmiana w src/engine.ts …
+npm run -s backtest | diff data/backtest-przed.txt -
+```
+
+W Dockerze: `docker compose exec hevy-companion node src/backtest.ts`.
+Raporty zawierają Twoje dane treningowe. Pliki `data/backtest-*.txt` są w `.gitignore`.
+
+---
+
+## Powiadomienia przez n8n (bez zmian w aplikacji)
+
+Aplikacja nie wysyła powiadomień sama. Wystarczy zewnętrzny harmonogram, np. [n8n](https://n8n.io):
+1. **Schedule Trigger** co kilka godzin.
+2. **HTTP Request** `GET http://<host>:3000/api/plan`.
+3. Dla każdej routine z `routines[]`: jeśli któreś ćwiczenie ma `changed: true`, a `fingerprint` routine jest inny niż przy
+   ostatnim powiadomieniu, wyślij powiadomienie (Telegram, ntfy, e-mail) i zapamiętaj `fingerprint`, np. w zmiennych n8n.
+
+`changed` zostaje `true` do czasu wysyłki do Hevy, dlatego trzeba zapamiętywać `fingerprint`. Inaczej powiadomienie powtarzałoby się co uruchomienie.
+`GET /api/plan` tylko czyta dane i nic nie zapisuje.
 
 ---
 
@@ -193,18 +265,21 @@ src/server.ts  (node:http, bez frameworka)
 
 | Plik | Co robi |
 |---|---|
-| `src/engine.ts` | Reguły progresji (`nextTarget`), dostępne ciężary (`expandWeights`), body do zapisu routine (`toPutBody`). Bez I/O, w pełni testowalne. |
+| `src/engine.ts` | Reguły progresji (`nextTarget`), e1RM (`e1rm`, `weightFor`, `snapDown`), dostępne ciężary (`expandWeights`), body do zapisu routine (`toPutBody`). Bez I/O, w pełni testowalne. |
+| `src/backtest.ts` | `npm run backtest`: odtworzenie decyzji silnika na historii z Hevy (`replay`, `report`). Tylko odczyt. |
 | `src/*.test.ts` | Testy silnika, historii, endpointów HTTP i logiki interfejsu (`node:test`). Hevy jest zastąpione atrapą, a ustawienia testów trafiają do katalogu tymczasowego. |
 | `src/hevy.ts` | Klient Hevy: routine'y, ostatnie 3 sesje robocze każdego ćwiczenia, szablony ćwiczeń (sprzęt, miniatura; cache w pamięci), zapis routine. |
 | `src/server.ts` | Serwer HTTP: składa plan, obsługuje config, endpointy i zabezpieczenia. |
 | `public/index.html` | Cały frontend: HTML, CSS i JS w jednym pliku, z jasnym i ciemnym motywem. |
 | `PRODUCT.md` | Opis produktu i zasady projektowe interfejsu. |
+| `SPEC.md`, `tasks/` | Specyfikacja algorytmu (e1RM, RPE, backtest) i plan zadań. |
 | `dockerhub-description.md` | Opis repozytorium na Docker Hub. |
 | `docker-compose.yml` | Uruchomienie z gotowego obrazu z Docker Hub. |
 | `src/exercises-pl.json` | Mapa `exercise_template_id → polska nazwa` (454 ćwiczenia wbudowane w Hevy). |
 | `scripts/update-pl-names.mjs` | Odświeża `exercises-pl.json` z publicznej wersji webowej Hevy. |
 | `data/config.json` | Twoje ustawienia (w `.gitignore`). |
 | `data/history.json` | Ostatnia próba wysyłki każdego planu, status, kopia przed i po oraz zestawienie zmian (w `.gitignore`). |
+| `data/backtest-*.txt` | Zapisane raporty backtestu do porównań (w `.gitignore`). |
 
 ### Technologie
 
@@ -220,7 +295,7 @@ src/server.ts  (node:http, bez frameworka)
 | Endpoint | Po co |
 |---|---|
 | `GET /v1/routines?page&pageSize=10` | lista routine (stronicowana) |
-| `GET /v1/workouts?page&pageSize=10` | historia, od najnowszych; przestaje czytać, gdy ma 3 sesje robocze każdego ćwiczenia (max 30 stron = 300 treningów) |
+| `GET /v1/workouts?page&pageSize=10` | historia, od najnowszych; przestaje czytać, gdy ma 3 sesje robocze każdego ćwiczenia (backtest: 50), max 30 stron = 300 treningów |
 | `GET /v1/exercise_templates/{id}` | `equipment` i `thumbnail_url` |
 | `PUT /v1/routines/{id}` | zapis routine |
 
@@ -266,9 +341,14 @@ Specyfika API, o której trzeba pamiętać:
 - [x] Znacznik zastoju w ostatnich 3 porównywalnych sesjach, bez wpływu na decyzję.
 - [x] Historia ostatniej wysyłki każdego planu z kopią poprzednich wartości do pobrania.
 - [ ] Osobny ciężar dla każdej serii, dla piramid i serii typu „top set” (powtórzenia już są liczone osobno).
-- [ ] Sufit ciężaru z e1RM jak w Periodize (`round(e1RM × 85% / krok) × krok`). e1RM: Brzycki do 10 powtórzeń, Epley powyżej.
+- [x] e1RM i RPE w stylu Gravl: zapas z RPE liczy się jako powtórzenia, przy wyraźnym zapasie skok większy niż jeden krok.
+- [x] Drabinka +1 w najsłabszej serii i poprawka serii na różnych ciężarach (wybrane backtestem).
+- [x] `npm run backtest`: sprawdzanie reguł na własnej historii.
+- [ ] Strojenie progów RPE (cel `dolna granica + 2`, limit +10%, 15 powt.) backtestem po 2–3 tygodniach wpisywania RPE.
 - [ ] Progresja ćwiczeń z masą ciała i na czas (np. +5 s planka).
 - [x] Ustawienia `maxRpe` i `exclude` w UI.
-- [ ] Automatyczny sync, np. podgląd zmian po każdym nowym treningu (webhook Hevy albo cron) i powiadomienie.
+- [x] Powiadomienie o nowych zmianach: przepis na n8n z `GET /api/plan` (sekcja „Powiadomienia przez n8n”).
+- [ ] Spadek po przerwie: po ponad 2 tygodniach bez ćwiczenia cel ok. 1% niżej za każdy tydzień (jak w Gravl).
 - [ ] Deload: ręczny przełącznik („lżejszy tydzień”: mniej serii i mniejszy ciężar), zgodnie z ARF, czyli nie z automatu co N tygodni.
+  Treningi deload nie powinny wpływać na decyzje (sposób oznaczania w Hevy do ustalenia).
 - [ ] Periodyzacja i inne metody z Periodize (RPE-based, wave loading), jeśli będą potrzebne.

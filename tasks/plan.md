@@ -37,11 +37,11 @@ Kroki T3–T6 po kolei, żeby każdy diff raportu dotyczył jednej zmiany.
 - [x] T4: poprawka serii na różnych ciężarach (XS)
 - [x] T5: funkcje e1RM: `e1rm`, `weightFor`, `snapDown` (S)
 - [x] T6: RPE i e1RM w regule podniesienia ciężaru (S)
-- [ ] **Checkpoint B:** testy, diffy raportów, podgląd w UI
+- [x] **Checkpoint B:** testy, diffy raportów, podgląd w UI
 
 ### Faza 3: dokumentacja
-- [ ] T7: README (zasady, backtest, n8n) (XS)
-- [ ] **Checkpoint C:** kryteria sukcesu ze specu spełnione
+- [x] T7: README (zasady, backtest, n8n) (XS)
+- [x] **Checkpoint C:** kryteria sukcesu ze specu spełnione
 
 ## Ryzyka
 | Ryzyko | Wpływ | Co robimy |

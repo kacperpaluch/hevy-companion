@@ -6,6 +6,10 @@ Prywatna aplikacja webowa do **podwójnej progresji (double progression)** na ba
 - Dla każdego ćwiczenia liczy następny cel: ciężar i powtórzenia **dla każdej serii osobno**, i pisze, dlaczego.
 - Pokazuje podgląd zmian. Nic nie trafia do Hevy, dopóki nie klikniesz „Wyślij do Hevy”.
 - Ciężar rośnie dopiero, gdy wszystkie serie dojdą do górnej granicy zakresu (zgodnie z [ARF](https://arf.edu.pl/jak-progresowac-na-silowni/)).
+  Do tego czasu: +1 powtórzenie w najsłabszej serii.
+- RPE wpisane w Hevy liczy się jako zapas powtórzeń (10 przy RPE 8 = 12). Przy wyraźnym zapasie ciężar może skoczyć
+  o więcej niż jeden krok, wyliczony z szacowanego ciężaru maksymalnego (e1RM), jak w [Gravl](https://gravl.ai/blog/how-gravl-algorithm-works).
+- Reguły można sprawdzić na własnej historii: `docker compose exec hevy-companion node src/backtest.ts`.
 
 Potrzebny jest klucz API Hevy (Hevy Pro: Settings → Developer → API key).
 

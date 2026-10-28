@@ -12,7 +12,7 @@ One person: the owner, who trains with Hevy and runs this app privately on a hom
 
 ## Product Purpose
 
-Double progression on top of Hevy data, modelled on periodize.fit. For each exercise in each Hevy routine it computes the next target (weight × reps), explains why, previews the change, and writes it back to the routine only after an explicit "Wyślij do Hevy". Success: after a workout, the owner sees within seconds which exercises move up, which hold and which drop back, and sends them.
+Double progression on top of Hevy data (ARF rules), with Gravl-style use of RPE: reps in reserve count towards the top of the range, and a clearly easy set can jump further via estimated 1RM. Rules are checked against the owner's own Hevy history with `npm run backtest`. For each exercise in each Hevy routine it computes the next target (weight × reps), explains why, previews the change, and writes it back to the routine only after an explicit "Wyślij do Hevy". Success: after a workout, the owner sees within seconds which exercises move up, which hold and which drop back, and sends them.
 
 ## Positioning
 

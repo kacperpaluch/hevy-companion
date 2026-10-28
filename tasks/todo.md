@@ -86,23 +86,23 @@ hamulec `maxRpe` bez zmian.
 **Weryfikacja ręczna:** `diff data/backtest-after-t4.txt <(npm run -s backtest)` jest **pusty** (Twoja historia nie ma RPE).
 **Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** T5 · **Rozmiar:** S
 
-### - [ ] Checkpoint B
+### - [x] Checkpoint B
 - [x] `npm test` zielone (48/48)
 - [x] Diffy raportów zgodne z oczekiwaniami (T3: tylko cele drabinki; T4: tylko serie mieszane; T6: pusty)
 - [x] `npm start`: wiersze i szczegóły ćwiczeń pokazują sensowne decyzje i powody (sprawdzone przez `GET /api/plan`, bez przeglądarki)
-- [ ] Przegląd z Tobą
+- [x] Przegląd z Tobą (aplikacja obejrzana w Dockerze; RPE zostaje w wersji Gravl)
 
 ## Faza 3: dokumentacja
 
-### - [ ] T7: README
+### - [x] T7: README
 **Akceptacja**
-- [ ] „Zasady progresji”: tabela zaktualizowana (drabinka w najsłabszej serii, RPE i powtórzenia efektywne, skok z e1RM i limit 10%, serie na różnych ciężarach).
-- [ ] Sekcja „Backtest”: komendy lokalnie i w Dockerze, jak czytać znaczniki, raporty zapisywać poza repo.
-- [ ] Przepis na n8n: `GET /api/plan`, `changed: true`, deduplikacja po `fingerprint`.
-- [ ] „Do zrobienia”: odhaczone e1RM; dopisane `detraining`, `deload`, `timed-progression`, strojenie progów RPE.
+- [x] „Zasady progresji”: tabela zaktualizowana (drabinka w najsłabszej serii, RPE i powtórzenia efektywne, skok z e1RM i limit 10%, serie na różnych ciężarach).
+- [x] Sekcja „Backtest”: komendy lokalnie i w Dockerze, jak czytać znaczniki, raporty zapisywać poza repo.
+- [x] Przepis na n8n: `GET /api/plan`, `changed: true`, deduplikacja po `fingerprint`.
+- [x] „Do zrobienia”: odhaczone e1RM; dopisane `detraining`, `deload`, `timed-progression`, strojenie progów RPE.
 
 **Pliki:** `README.md` · **Zależy od:** T6 · **Rozmiar:** XS
 
-### - [ ] Checkpoint C
-- [ ] Kryteria sukcesu 1–5 ze SPEC.md spełnione
-- [ ] Decyzja o commicie, pushu i wydaniu obrazu po Twojej stronie
+### - [x] Checkpoint C
+- [x] Kryteria sukcesu 1–5 ze SPEC.md spełnione
+- [x] Decyzja o commicie, pushu i wydaniu obrazu po Twojej stronie → release zlecony 2026-10-28
