@@ -34,7 +34,7 @@ Kroki T3–T6 po kolei, żeby każdy diff raportu dotyczył jednej zmiany.
 
 ### Faza 2: silnik
 - [x] T3: drabinka +1 w najsłabszej serii (S) — dodane po Checkpoint A
-- [ ] T4: poprawka serii na różnych ciężarach (XS)
+- [x] T4: poprawka serii na różnych ciężarach (XS)
 - [ ] T5: funkcje e1RM: `e1rm`, `weightFor`, `snapDown` (S)
 - [ ] T6: RPE i e1RM w regule podniesienia ciężaru (S)
 - [ ] **Checkpoint B:** testy, diffy raportów, podgląd w UI

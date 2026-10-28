@@ -27,6 +27,12 @@ test('rep ladder: +1 only on the weakest set (first on a tie), within the range'
   const r = nextTarget([[s(25, 11), s(25, 10)]], rule);
   assert.match(r.action !== 'skip' ? r.reason : '', /\+1 powt\. w serii 2/);
 });
+test('sets at a lighter load count as the weakest set at the working weight', () => {
+  assert.deepEqual(wr(nextTarget([[s(70, 12), s(70, 11), s(80, 10)]], rule)), ['hold', 80, [11, 10, 10]]);
+  assert.deepEqual(wr(nextTarget([[s(7, 9), s(7, 8), s(9, 8)]], dumbbells)), ['hold', 9, [9, 8, 8]]);
+  const r = nextTarget([[s(70, 12), s(70, 11), s(80, 10)]], rule);
+  assert.match(r.action !== 'skip' ? r.reason : '', /lżejsze serie liczę jak najsłabszą na 80 kg\) →/);
+});
 test('warmups ignored; bodyweight, no history and excluded skipped', () => {
   assert.deepEqual(wr(nextTarget([[s(5, 20, 'warmup'), s(20, 9)]], rule)), ['hold', 20, [10]]);
   assert.equal(wr(nextTarget([[s(null, null)]], rule)), 'skip');

@@ -50,13 +50,13 @@ Reguła 3 ze specu (decyzja po backteście): ciężar zostaje, każda seria ≥ 
 (także w sesjach mieszanych, które poprawia T4); więcej `=`. Wynik: `=` 4 → 14, `↓` 31 → 21, nic poza `hold` się nie zmieniło. Zapisz raport jako `data/backtest-after-t3.txt`.
 **Pliki:** `src/engine.ts`, `src/engine.test.ts`, ewentualnie `src/server.test.ts`, `src/frontend.test.ts` · **Zależy od:** Checkpoint A · **Rozmiar:** S
 
-### - [ ] T4: poprawka serii na różnych ciężarach
+### - [x] T4: poprawka serii na różnych ciężarach
 Reguła 4 ze specu: ciężar zostaje W; serie lżejsze liczą się jak najsłabsza seria na W; potem drabinka z T3.
 
 **Akceptacja**
-- [ ] Testy: 70×12, 70×11, 80×10 → 80 × 11/10/10; hantle 7×9, 7×8, 9×8 → 9 × 9/8/8.
-- [ ] Istniejący test „last set dropped to 25 kg” (30×12, 30×12, 25×12 → 30 × 12/12/12) przechodzi bez zmian.
-- [ ] Powód mówi, że lżejsze serie dostały cel z serii na W.
+- [x] Testy: 70×12, 70×11, 80×10 → 80 × 11/10/10; hantle 7×9, 7×8, 9×8 → 9 × 9/8/8.
+- [x] Istniejący test „last set dropped to 25 kg” (30×12, 30×12, 25×12 → 30 × 12/12/12) przechodzi bez zmian.
+- [x] Powód mówi, że lżejsze serie dostały cel z serii na W.
 
 **Weryfikacja ręczna:** `diff data/backtest-after-t3.txt <(npm run -s backtest)`: różnice **tylko** w sesjach z seriami na różnych
 ciężarach. Zapisz raport jako `data/backtest-after-t4.txt`.

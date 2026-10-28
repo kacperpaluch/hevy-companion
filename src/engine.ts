@@ -86,10 +86,14 @@ export function nextTarget(sessions: HevySet[][], rule: Rule): Result {
     return { action: 'increase', weight: next, reps: sets.map(() => min),
       reason: `Wszystkie serie ≥ ${max} powt. (${fmt(sets)}) → ${kg(next)} (+${kg(r2(next - weight))}), wracasz do ${min} powt.` };
   }
+  // a set at a lighter load says nothing about the working weight: count it as the weakest set done at that weight
+  const floorAtW = Math.min(...sets.filter((s) => s.weight_kg === weight).map((s) => s.reps!));
+  const ladder = sets.map((s) => (s.weight_kg === weight ? s.reps! : floorAtW));
+  const lighter = sets.some((s) => s.weight_kg !== weight) ? `; lżejsze serie liczę jak najsłabszą na ${kg(weight)}` : '';
   // +1 rep on the weakest set only (12/10/8 → 12/10/9): backtest on real history hit this 4× more often than +1 on every set
-  const weakest = reps.indexOf(Math.min(...reps));
-  const perSet = reps.map((r, i) => Math.min(max, Math.max(min, i === weakest ? r + 1 : r)));
-  const plusOne = perSet[weakest] === reps[weakest] + 1 ? ` (+1 powt. w serii ${weakest + 1})` : '';
+  const weakest = ladder.indexOf(Math.min(...ladder));
+  const perSet = ladder.map((r, i) => Math.min(max, Math.max(min, i === weakest ? r + 1 : r)));
+  const plusOne = perSet[weakest] === ladder[weakest] + 1 ? ` (+1 powt. w serii ${weakest + 1})` : '';
   const goal = `cel ${perSet.join(' / ')} powt.${plusOne}`;
 
   if (best < min) {
@@ -102,11 +106,11 @@ export function nextTarget(sessions: HevySet[][], rule: Rule): Result {
       return { action: 'decrease', weight: down, reps: sets.map(() => min),
         reason: `Drugi trening z rzędu poniżej ${min} powt. na ${kg(weight)} (${fmt(sets)}; wcześniej ${fmt(prev)}) → za duży skok, wracasz do ${kg(down)}` };
     return { action: 'hold', weight, reps: perSet,
-      reason: `Poniżej zakresu (${fmt(sets)}) → zostaje ${kg(weight)}, ${goal} Jeśli znowu się nie uda, cofniemy ciężar.` };
+      reason: `Poniżej zakresu (${fmt(sets)}${lighter}) → zostaje ${kg(weight)}, ${goal} Jeśli znowu się nie uda, cofniemy ciężar.` };
   }
 
   return { action: 'hold', weight, reps: perSet,
-    reason: `Nie wszystkie serie na ${kg(weight)} doszły do ${max} (${fmt(sets)}) → zostaje ${kg(weight)}, ${goal}` };
+    reason: `Nie wszystkie serie na ${kg(weight)} doszły do ${max} (${fmt(sets)}${lighter}) → zostaje ${kg(weight)}, ${goal}` };
 }
 
 // target reps for the i-th working set of the routine; extra routine sets beyond last session reuse the last target
