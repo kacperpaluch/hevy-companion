@@ -12,37 +12,35 @@ krokach. Każdy krok porównujemy z poprzednim raportem backtestu. Na końcu REA
 - **Reguły bez kopii:** `server.ts` eksportuje `loadConfig` i `ruleFor`, a backtest ich używa. Import `server.ts` nie uruchamia
   nasłuchu (`import.meta.main`).
 - **Historia w backteście:** `recentSessions(ids, 50)`, ta sama funkcja co aplikacja. Aplikacja zostaje przy 3 sesjach.
-- **Kolejność zmian w silniku:** najpierw poprawka serii na różnych ciężarach (jedyna zmiana widoczna na historii bez RPE),
+- **Kolejność zmian w silniku:** drabinka, poprawka serii na różnych ciężarach (obie widoczne na historii bez RPE),
   potem funkcje e1RM, na końcu RPE. Twoja historia nie ma jeszcze RPE, więc po kroku z RPE raport backtestu ma być
-  **identyczny** jak po poprawce. To mocne sprawdzenie, że bez RPE nic się nie zmieniło.
+  **identyczny** jak po T4. To mocne sprawdzenie, że bez RPE nic się nie zmieniło.
 - **Format powodu:** decyzja zawsze po ostatnim „→”, bo tak wiersz w UI wyciąga krótki opis (`public/index.html:161`).
 - **Raporty backtestu poza repo.** Zawierają Twoje dane treningowe, więc trafiają do `data/backtest-*.txt` (w `.gitignore`).
 
 ## Graf zależności
 ```
-T1 replay (czysta) ──► T2 CLI backtest ──► [Checkpoint A: raport bazowy]
-                                                │
-T3 serie na różnych ciężarach ◄─────────────────┘
-T4 funkcje e1RM ──► T5 RPE w podniesieniu ──► [Checkpoint B]
-                                                │
-                                   T6 README ◄──┘ ──► [Checkpoint C]
+T1 replay ──► T2 CLI backtest ──► [Checkpoint A: raport bazowy] ──► T3 drabinka ──► T4 serie mieszane
+                                                                                        │
+                                          T5 funkcje e1RM ──► T6 RPE w podniesieniu ◄───┘ ──► [Checkpoint B] ──► T7 README ──► [Checkpoint C]
 ```
-T3 i T4 są niezależne (T4 to nowe funkcje bez użycia), ale robimy je po kolei, żeby każdy diff raportu był jednoznaczny.
+Kroki T3–T6 po kolei, żeby każdy diff raportu dotyczył jednej zmiany.
 
 ## Lista zadań
 ### Faza 1: backtest
 - [x] T1: `replay()` i ocena porównań (S)
 - [x] T2: skrypt `npm run backtest` (S)
-- [ ] **Checkpoint A:** raport bazowy zapisany, przejrzany z Tobą
+- [x] **Checkpoint A:** raport bazowy zapisany, przejrzany z Tobą → decyzja: drabinka +1 w najsłabszej serii (T3)
 
 ### Faza 2: silnik
-- [ ] T3: poprawka serii na różnych ciężarach (XS)
-- [ ] T4: funkcje e1RM: `e1rm`, `weightFor`, `snapDown` (S)
-- [ ] T5: RPE i e1RM w regule podniesienia ciężaru (S)
-- [ ] **Checkpoint B:** testy, diff raportów, podgląd w UI
+- [ ] T3: drabinka +1 w najsłabszej serii (S) — dodane po Checkpoint A
+- [ ] T4: poprawka serii na różnych ciężarach (XS)
+- [ ] T5: funkcje e1RM: `e1rm`, `weightFor`, `snapDown` (S)
+- [ ] T6: RPE i e1RM w regule podniesienia ciężaru (S)
+- [ ] **Checkpoint B:** testy, diffy raportów, podgląd w UI
 
 ### Faza 3: dokumentacja
-- [ ] T6: README (zasady, backtest, n8n) (XS)
+- [ ] T7: README (zasady, backtest, n8n) (XS)
 - [ ] **Checkpoint C:** kryteria sukcesu ze specu spełnione
 
 ## Ryzyka

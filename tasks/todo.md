@@ -30,26 +30,39 @@ Uruchomienie z terminala: pobiera routine i historię, bierze reguły z serwera,
 raport zgadza się z porównaniem z rozmowy (np. wyciskanie nad głowę: zalecenie 7 kg, a Ty zostałeś przy 6 kg, więc `↓`).
 **Pliki:** `src/backtest.ts`, `src/server.ts`, `package.json` · **Zależy od:** T1 · **Rozmiar:** S
 
-### - [ ] Checkpoint A
-- [ ] `npm test` zielone
-- [ ] Raport bazowy zapisany w `data/backtest-baseline.txt` (poza gitem)
-- [ ] Raport przejrzany z Tobą, zanim ruszymy silnik
+### - [x] Checkpoint A
+- [x] `npm test` zielone
+- [x] Raport bazowy zapisany w `data/backtest-baseline.txt` (poza gitem)
+- [x] Raport przejrzany z Tobą, zanim ruszymy silnik
 
 ## Faza 2: silnik
 
-### - [ ] T3: poprawka serii na różnych ciężarach
-Reguła 3 ze specu: ciężar zostaje W; serie na W +1; serie lżejsze = najmniej powtórzeń spośród serii na W, +1; w granicach zakresu.
+### - [ ] T3: drabinka +1 w najsłabszej serii
+Reguła 3 ze specu (decyzja po backteście): ciężar zostaje, każda seria ≥ dolna granica, +1 powt. tylko w najsłabszej serii
+(remis → pierwsza), ≤ górna granica.
 
 **Akceptacja**
-- [ ] Testy: 70×12, 70×11, 80×10 → 80 × 11/11/11; hantle 7×9, 7×8, 9×8 → 9 × 9/9/9.
+- [ ] Testy: 11/10 → 11/11; 9/7 → 9/8; 13/9 → 12/10 (najpierw obcięcie do górnej granicy); 80×10, 80×9 → 10/10.
+- [ ] Zaktualizowane oczekiwania w istniejących testach (silnik, serwer, UI) wyłącznie tam, gdzie zmienia się cel powtórzeń drabinki.
+- [ ] Powód mówi, w której serii dokładasz powtórzenie.
+
+**Weryfikacja ręczna:** `diff data/backtest-baseline.txt <(npm run -s backtest)`: różnice **tylko** w celach `hold` dla sesji z jednym
+ciężarem; podsumowanie zbliżone do porównania z rozmowy (więcej `=`). Zapisz raport jako `data/backtest-after-t3.txt`.
+**Pliki:** `src/engine.ts`, `src/engine.test.ts`, ewentualnie `src/server.test.ts`, `src/frontend.test.ts` · **Zależy od:** Checkpoint A · **Rozmiar:** S
+
+### - [ ] T4: poprawka serii na różnych ciężarach
+Reguła 4 ze specu: ciężar zostaje W; serie lżejsze liczą się jak najsłabsza seria na W; potem drabinka z T3.
+
+**Akceptacja**
+- [ ] Testy: 70×12, 70×11, 80×10 → 80 × 11/10/10; hantle 7×9, 7×8, 9×8 → 9 × 9/8/8.
 - [ ] Istniejący test „last set dropped to 25 kg” (30×12, 30×12, 25×12 → 30 × 12/12/12) przechodzi bez zmian.
-- [ ] Powód dla tego przypadku mówi, że lżejsze serie dostały cel z serii na W.
+- [ ] Powód mówi, że lżejsze serie dostały cel z serii na W.
 
-**Weryfikacja ręczna:** `diff data/backtest-baseline.txt <(npm run -s backtest)`: różnice **tylko** w sesjach z seriami na różnych ciężarach.
-Potem zapisz nowy raport jako `data/backtest-after-t3.txt`.
-**Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** Checkpoint A · **Rozmiar:** XS
+**Weryfikacja ręczna:** `diff data/backtest-after-t3.txt <(npm run -s backtest)`: różnice **tylko** w sesjach z seriami na różnych
+ciężarach. Zapisz raport jako `data/backtest-after-t4.txt`.
+**Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** T3 · **Rozmiar:** XS
 
-### - [ ] T4: funkcje e1RM
+### - [ ] T5: funkcje e1RM
 `e1rm(w, r)` (Brzycki ≤ 10, Epley 11–15, obcięcie do 15), `weightFor(e1rm, r)` (odwrotność), `snapDown(x, rule)`
 (największy dostępny ciężar ≤ x: z listy `weights` albo `W + k × increment`).
 
@@ -57,9 +70,9 @@ Potem zapisz nowy raport jako `data/backtest-after-t3.txt`.
 - [ ] Testy: ciągłość przy 10 powt.; 20 powt. liczone jak 15; `weightFor(e1rm(w, r), r) ≈ w`; `snapDown` z listą hantli i ze skokiem.
 - [ ] Brak zmian w decyzjach (`nextTarget` jeszcze ich nie używa).
 
-**Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** — (po T3 dla czytelności) · **Rozmiar:** S
+**Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** — (po T4 dla czytelności) · **Rozmiar:** S
 
-### - [ ] T5: RPE i e1RM w regule podniesienia ciężaru
+### - [ ] T6: RPE i e1RM w regule podniesienia ciężaru
 Reguła 2 ze specu: powtórzenia efektywne = reps + (10 − RPE); podniesienie, gdy wszystkie serie na W mają efektywne ≥ górna
 granica; nowy ciężar = większy z (następny krok, `snapDown(weightFor(e1rm, min + 2))`); RPE podnosi e1RM najwyżej o 10%;
 hamulec `maxRpe` bez zmian.
@@ -68,27 +81,27 @@ hamulec `maxRpe` bez zmian.
 - [ ] Wszystkie wiersze tabeli „Przykłady” ze SPEC.md są testami i przechodzą (80×12 @6 → 90 × 8/8; 80×10 @8 → 85 × 8/8; …).
 - [ ] Test limitu +10%.
 - [ ] Gdy RPE wpłynęło na decyzję, powód to mówi. Tekst po ostatnim „→” to decyzja (test).
-- [ ] Dotychczasowe testy przechodzą bez zmian oczekiwań.
+- [ ] Testy z T3–T5 przechodzą bez zmian oczekiwań.
 
-**Weryfikacja ręczna:** `diff data/backtest-after-t3.txt <(npm run -s backtest)` jest **pusty** (Twoja historia nie ma RPE).
-**Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** T4 · **Rozmiar:** S
+**Weryfikacja ręczna:** `diff data/backtest-after-t4.txt <(npm run -s backtest)` jest **pusty** (Twoja historia nie ma RPE).
+**Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** T5 · **Rozmiar:** S
 
 ### - [ ] Checkpoint B
 - [ ] `npm test` zielone
-- [ ] Oba diffy raportów zgodne z oczekiwaniami (T3: tylko serie mieszane; T5: pusty)
+- [ ] Diffy raportów zgodne z oczekiwaniami (T3: tylko cele drabinki; T4: tylko serie mieszane; T6: pusty)
 - [ ] `npm start`: wiersze i szczegóły ćwiczeń pokazują sensowne decyzje i powody
 - [ ] Przegląd z Tobą
 
 ## Faza 3: dokumentacja
 
-### - [ ] T6: README
+### - [ ] T7: README
 **Akceptacja**
-- [ ] „Zasady progresji”: tabela zaktualizowana (RPE i powtórzenia efektywne, skok z e1RM i limit 10%, serie na różnych ciężarach).
+- [ ] „Zasady progresji”: tabela zaktualizowana (drabinka w najsłabszej serii, RPE i powtórzenia efektywne, skok z e1RM i limit 10%, serie na różnych ciężarach).
 - [ ] Sekcja „Backtest”: komendy lokalnie i w Dockerze, jak czytać znaczniki, raporty zapisywać poza repo.
 - [ ] Przepis na n8n: `GET /api/plan`, `changed: true`, deduplikacja po `fingerprint`.
 - [ ] „Do zrobienia”: odhaczone e1RM; dopisane `detraining`, `deload`, `timed-progression`, strojenie progów RPE.
 
-**Pliki:** `README.md` · **Zależy od:** T5 · **Rozmiar:** XS
+**Pliki:** `README.md` · **Zależy od:** T6 · **Rozmiar:** XS
 
 ### - [ ] Checkpoint C
 - [ ] Kryteria sukcesu 1–5 ze SPEC.md spełnione

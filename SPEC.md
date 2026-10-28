@@ -102,11 +102,13 @@ powtórzenia „w zapasie”, więc może przyspieszyć podniesienie ciężaru, 
    - e1RM bierze najlepszą serię na W z powtórzeniami efektywnymi, ale **RPE może podnieść e1RM najwyżej o 10%**
      względem e1RM z samych powtórzeń.
    - Efekt: brak RPE albo RPE 9–10 → jeden krok (jak dziś). RPE ≤ 7 („Łatwo”) → większy skok, jeśli e1RM na to pozwala.
-3. **Serie na różnych ciężarach** (poprawka błędu): ciężar zostaje W. Serie na W: +1 powt. Serie lżejsze: najmniej powtórzeń
-   spośród serii na W, +1. Wszystko w granicach zakresu.
-4. Pozostałe przypadki: drabinka +1 powt. w każdej serii i cofnięcie ciężaru po 2 sesjach poniżej zakresu, **bez zmian**.
-   Dolna granica liczona z rzeczywistych powtórzeń, nie efektywnych.
-5. Powód każdej decyzji po polsku. Gdy RPE wpłynęło na decyzję, powód to mówi,
+3. **Drabinka powtórzeń** (zmiana po backteście): ciężar zostaje, każda seria co najmniej dolna granica, a **+1 powt. tylko
+   w najsłabszej serii** (przy remisie pierwsza z nich), nie więcej niż górna granica. Np. 11/10 → 11/11, 9/7 → 9/8.
+   Na Twojej historii trafia 12 z 38 razy zamiast 3 z 38 (`+1 w każdej serii`).
+4. **Serie na różnych ciężarach** (poprawka błędu): ciężar zostaje W. Serie lżejsze liczą się tak, jakby miały najmniej powtórzeń
+   spośród serii na W. Potem drabinka z punktu 3.
+5. Cofnięcie ciężaru po 2 sesjach poniżej zakresu **bez zmian**. Dolna granica liczona z rzeczywistych powtórzeń, nie efektywnych.
+6. Powód każdej decyzji po polsku. Gdy RPE wpłynęło na decyzję, powód to mówi,
    np. „Wszystkie serie ≥ 12 powt. z zapasem (12 @RPE 6, zapas 4, liczę jak 15; e1RM ≈ 120 kg) → 90 kg (+10 kg), wracasz do 8 powt.”.
 
 ### Przykłady (staną się testami; zakres 8–12, skok 5 kg)
@@ -115,14 +117,14 @@ powtórzenia „w zapasie”, więc może przyspieszyć podniesienie ciężaru, 
 | 80×12, 80×12 | 85 kg × 8/8 | jak dziś |
 | 80×12 @6, 80×12 @6 | **90 kg** × 8/8 | Łatwo: e1RM 120 → 90 kg |
 | 80×10 @8, 80×10 @8 | **85 kg** × 8/8 | 10 + 2 zapasu = 12, górna granica osiągnięta |
-| 80×10 @9.5, 80×9 @9.5 | 80 kg × 11/10 | jak dziś |
+| 80×10 @9.5, 80×9 @9.5 | 80 kg × **10/10** | drabinka; dziś: 11/10 |
 | 80×12 @10, 80×12 @9 | 80 kg × 12/12 | hamulec `maxRpe` jak dziś |
-| 70×12, 70×11, 80×10 | **80 kg × 11/11/11** | dziś: 12/12/11 |
-| 7×9, 7×8, 9×8 (hantle) | **9 kg × 9/9/9** | dziś: 10/9/9 |
+| 70×12, 70×11, 80×10 | **80 kg × 11/10/10** | jak 10/10/10 na 80 kg, potem drabinka; dziś: 12/12/11 |
+| 7×9, 7×8, 9×8 (hantle) | **9 kg × 9/8/8** | dziś: 10/9/9 |
 
 ### Kryterium akceptacji przebudowy
-Raport `backtest` przed i po zmianie na historii bez RPE różni się **tylko** sesjami z seriami na różnych ciężarach.
-Każda inna różnica to błąd.
+Raporty `backtest` na historii bez RPE: po drabince różnią się tylko celami w sesjach z jednym ciężarem; po poprawce serii
+mieszanych tylko sesjami z seriami na różnych ciężarach; po RPE są identyczne. Każda inna różnica to błąd.
 
 ---
 
@@ -196,15 +198,17 @@ if (down != null)
 ## Kryteria sukcesu
 1. `npm run backtest` drukuje deterministyczny raport dla Twojej routine i nie wykonuje żadnego zapisu w Hevy.
 2. Silnik przechodzi wszystkie testy z tabeli przykładów. Dotychczasowe testy przechodzą bez zmian oczekiwań,
-   poza przypadkami serii na różnych ciężarach.
-3. `diff` raportów przed i po przebudowie na historii bez RPE zawiera tylko sesje z seriami na różnych ciężarach.
+   poza celami powtórzeń zmienionymi przez drabinkę i poprawkę serii na różnych ciężarach.
+3. `diff` raportów na historii bez RPE po każdym kroku przebudowy zgadza się z „Kryterium akceptacji przebudowy”.
 4. Gdy RPE wpłynęło na decyzję, powód w UI to pokazuje.
 5. README opisuje nowe reguły i przepis na n8n.
 
 ## Decyzje (zamknięte pytania)
-1. **Serie na różnych ciężarach:** reguła z punktu 3 potwierdzona (70×12, 70×11, 80×10 → 80 × 11/11/11).
+1. **Serie na różnych ciężarach:** lżejsze serie liczą się jak najsłabsza seria na W (potwierdzone). Po zmianie drabinki
+   70×12, 70×11, 80×10 → 80 × 11/10/10.
 2. **Progi:** cel `min + 2` przy skoku, limit +10%, obcięcie do 15 powt. Do dostrojenia backtestem po 2–3 tygodniach z RPE.
 3. **Deload:** sposób oznaczania w Hevy ustalimy razem z modułem `deload`.
+4. **Drabinka:** +1 w najsłabszej serii zamiast w każdej (decyzja po backteście, 2026-10-28).
 
 Zasada powodów: wiersz w UI pokazuje tekst po ostatnim „→” (`public/index.html`), więc każdy powód kończy się decyzją,
 a wcześniejsze kroki rozumowania nie używają „→” po decyzji.
