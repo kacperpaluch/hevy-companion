@@ -82,8 +82,11 @@ export function nextTarget(sessions: HevySet[][], rule: Rule): Result {
   const { min, max } = rule;
   const noStep = !rule.weights && !rule.increment;
 
+  // RPE turns reps in reserve into reps (10 @RPE 8 counts as 12); no RPE = no reserve, like Gravl's default "hard"
+  const reserve = (s: HevySet) => (s.rpe ? Math.max(0, 10 - s.rpe) : 0);
+  const effective = (s: HevySet) => s.reps! + reserve(s);
   // a set dropped to a lighter load doesn't count as done at the working weight
-  if (sets.every((s) => s.weight_kg === weight && s.reps! >= max)) {
+  if (sets.every((s) => s.weight_kg === weight && effective(s) >= max)) {
     const hardest = Math.max(...sets.map((s) => s.rpe ?? 0));
     if (hardest > rule.maxRpe)
       return { action: 'hold', weight, reps: sets.map(() => max),
@@ -92,8 +95,17 @@ export function nextTarget(sessions: HevySet[][], rule: Rule): Result {
     const next = stepUp(weight, rule);
     if (next == null)
       return { action: 'hold', weight, reps: sets.map(() => max), reason: `Wszystkie serie ≥ ${max} (${fmt(sets)}), ale ${kg(weight)} to największy dostępny ciężar` };
-    return { action: 'increase', weight: next, reps: sets.map(() => min),
-      reason: `Wszystkie serie ≥ ${max} powt. (${fmt(sets)}) → ${kg(next)} (+${kg(r2(next - weight))}), wracasz do ${min} powt.` };
+    // only a reported reserve can jump past one step: e1RM with reserve, lifted by RPE 10% at most, sized for min + 2 reps
+    let to = next, why = '';
+    if (sets.some((s) => reserve(s) > 0)) {
+      const raw = Math.max(...sets.map((s) => e1rm(weight, s.reps!)));
+      const est = Math.min(Math.max(...sets.map((s) => e1rm(weight, effective(s)))), raw * 1.1);
+      const fit = snapDown(weightFor(est, min + 2), weight, rule);
+      if (fit != null && fit > next) to = fit;
+      why = `; licząc zapas z RPE: ${sets.map((s) => String(effective(s)).replace('.', ',')).join(' / ')} powt.; e1RM ≈ ${kg(Math.round(est))}`;
+    }
+    return { action: 'increase', weight: to, reps: sets.map(() => min),
+      reason: `Wszystkie serie ≥ ${max} powt. (${fmt(sets)}${why}) → ${kg(to)} (+${kg(r2(to - weight))}), wracasz do ${min} powt.` };
   }
   // a set at a lighter load says nothing about the working weight: count it as the weakest set done at that weight
   const floorAtW = Math.min(...sets.filter((s) => s.weight_kg === weight).map((s) => s.reps!));

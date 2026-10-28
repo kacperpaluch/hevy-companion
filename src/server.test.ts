@@ -39,7 +39,7 @@ test('HTTP preview, settings and push use the same per-occurrence targets', asyn
     if (path === '/v1/workouts') return Response.json({ page_count: 1, workouts: [
       { title: 'Warmup only', start_time: '2026-10-27', exercises: [{ exercise_template_id: 'X', sets: [{ type: 'warmup', weight_kg: 10, reps: 10 }] }] },
       ...['2026-10-26', '2026-10-25', '2026-10-24'].map((date) => ({ title: 'Working session', start_time: date,
-        exercises: [{ exercise_template_id: 'X', sets: [{ type: 'normal', weight_kg: 20, reps: 10, rpe: 8 }] }] })),
+        exercises: [{ exercise_template_id: 'X', sets: [{ type: 'normal', weight_kg: 20, reps: 10, rpe: 9 }] }] })),
     ] });
     if (path === '/v1/exercise_templates/X') return Response.json({ equipment: 'dumbbell', thumbnail_url: null });
     throw new Error(`Unexpected Hevy request: ${path}`);

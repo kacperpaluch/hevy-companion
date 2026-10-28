@@ -72,16 +72,16 @@ ciężarach. Zapisz raport jako `data/backtest-after-t4.txt`.
 
 **Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** — (po T4 dla czytelności) · **Rozmiar:** S
 
-### - [ ] T6: RPE i e1RM w regule podniesienia ciężaru
+### - [x] T6: RPE i e1RM w regule podniesienia ciężaru
 Reguła 2 ze specu: powtórzenia efektywne = reps + (10 − RPE); podniesienie, gdy wszystkie serie na W mają efektywne ≥ górna
 granica; nowy ciężar = większy z (następny krok, `snapDown(weightFor(e1rm, min + 2))`); RPE podnosi e1RM najwyżej o 10%;
 hamulec `maxRpe` bez zmian.
 
 **Akceptacja**
-- [ ] Wszystkie wiersze tabeli „Przykłady” ze SPEC.md są testami i przechodzą (80×12 @6 → 90 × 8/8; 80×10 @8 → 85 × 8/8; …).
-- [ ] Test limitu +10%.
-- [ ] Gdy RPE wpłynęło na decyzję, powód to mówi. Tekst po ostatnim „→” to decyzja (test).
-- [ ] Testy z T3–T5 przechodzą bez zmian oczekiwań.
+- [x] Wszystkie wiersze tabeli „Przykłady” ze SPEC.md są testami i przechodzą (80×12 @6 → 90 × 8/8; 80×10 @8 → 85 × 8/8; …).
+- [x] Test limitu +10%.
+- [x] Gdy RPE wpłynęło na decyzję, powód to mówi. Tekst po ostatnim „→” to decyzja (test).
+- [x] Testy z T3–T5 przechodzą bez zmian oczekiwań. Dane testowe serwera: RPE 8 → 9 (seria 20×10 @8 liczy się teraz jak 12; test dotyczy hamulca `maxRpe` 7,5, który dalej działa; asercje bez zmian).
 
 **Weryfikacja ręczna:** `diff data/backtest-after-t4.txt <(npm run -s backtest)` jest **pusty** (Twoja historia nie ma RPE).
 **Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** T5 · **Rozmiar:** S

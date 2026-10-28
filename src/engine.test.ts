@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { changes, e1rm, expandWeights, nextTarget, snapDown, stalled, toPutBody, weightFor, type HevySet, type Result, type Routine } from './engine.ts';
+import { changes, e1rm, expandWeights, nextTarget, snapDown, stalled, toPutBody, weightFor, type HevySet, type Result, type Routine, type Rule } from './engine.ts';
 
 const rule = { min: 8, max: 12, increment: 2.5, maxRpe: 9 };
 const dumbbells = { ...rule, weights: expandWeights([[1, 10, 1], [12.5, 50, 2.5]]) };
@@ -129,4 +129,29 @@ test('snapDown: heaviest available load at or below the target', () => {
   assert.equal(snapDown(8.17, 7, dumbbells), 8);
   assert.equal(snapDown(12, 10, dumbbells), 10);
   assert.equal(snapDown(0.5, 1, dumbbells), undefined);
+});
+
+// SPEC.md „Przykłady”: range 8–12, step 5 kg
+test('RPE: reps in reserve count towards the top of the range; low RPE may jump further via e1RM', () => {
+  const five = { ...rule, increment: 5 };
+  const rpe = (w: number, r: number, x: number | null = null) => s(w, r, 'normal', x);
+  const table: [HevySet[], Rule, unknown][] = [
+    [[rpe(80, 12), rpe(80, 12)], five, ['increase', 85, [8, 8]]],
+    [[rpe(80, 12, 6), rpe(80, 12, 6)], five, ['increase', 90, [8, 8]]], // easy: e1RM 120 → 90 kg
+    [[rpe(80, 10, 8), rpe(80, 10, 8)], five, ['increase', 85, [8, 8]]], // 10 + 2 in reserve = 12
+    [[rpe(80, 10, 9.5), rpe(80, 9, 9.5)], five, ['hold', 80, [10, 10]]],
+    [[rpe(80, 12, 10), rpe(80, 12, 9)], five, ['hold', 80, [12, 12]]], // maxRpe brake
+    [[rpe(70, 12), rpe(70, 11), rpe(80, 10)], five, ['hold', 80, [11, 10, 10]]],
+    [[rpe(7, 9), rpe(7, 8), rpe(9, 8)], dumbbells, ['hold', 9, [9, 8, 8]]],
+    [[rpe(80, 15), rpe(80, 15)], five, ['increase', 85, [8, 8]]], // no RPE: one step, however far above the range
+    [[rpe(100, 8, 6), rpe(100, 8, 6)], rule, ['increase', 102.5, [8, 8]]], // RPE lifts e1RM by 10% at most (uncapped: 105)
+  ];
+  for (const [sets, r, want] of table) assert.deepEqual(wr(nextTarget([sets], r)), want, JSON.stringify(sets));
+});
+test('RPE reason says it counted the reserve; the row text after the last arrow is the decision', () => {
+  const r = nextTarget([[s(80, 12, 'normal', 6), s(80, 12, 'normal', 6)]], { ...rule, increment: 5 });
+  const reason = r.action !== 'skip' ? r.reason : '';
+  assert.match(reason, /zapas/);
+  assert.match(reason, /e1RM ≈ 120 kg/);
+  assert.equal(reason.split('→').at(-1)!.trim(), '90 kg (+10 kg), wracasz do 8 powt.');
 });
