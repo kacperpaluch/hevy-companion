@@ -31,7 +31,7 @@ T3 i T4 są niezależne (T4 to nowe funkcje bez użycia), ale robimy je po kolei
 
 ## Lista zadań
 ### Faza 1: backtest
-- [ ] T1: `replay()` i ocena porównań (S)
+- [x] T1: `replay()` i ocena porównań (S)
 - [ ] T2: skrypt `npm run backtest` (S)
 - [ ] **Checkpoint A:** raport bazowy zapisany, przejrzany z Tobą
 

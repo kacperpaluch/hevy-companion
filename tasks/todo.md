@@ -5,15 +5,15 @@ Weryfikacja dla każdego zadania: `npm test` (nie ma kroku budowania).
 
 ## Faza 1: backtest
 
-### - [ ] T1: `replay()` i ocena porównań
+### - [x] T1: `replay()` i ocena porównań
 Czysta funkcja, która dla historii jednego ćwiczenia (od najnowszej) zwraca listę kroków: sesja → decyzja silnika na historii
 do tej sesji → następna sesja → znacznik `=`/`↑`/`↓`/`·`, plus podsumowanie liczników.
 
 **Akceptacja**
-- [ ] `=`: następna sesja na zaleconym ciężarze i każda seria ≥ celu (seria i-ta względem `repsAt(r, i)`); `↑`: cięższa;
+- [x] `=`: następna sesja na zaleconym ciężarze i każda seria ≥ celu (seria i-ta względem `repsAt(r, i)`); `↑`: cięższa;
       `↓`: lżejsza albo któraś seria poniżej celu; `·`: decyzja `skip`. Ostatnia sesja nie ma następnej, więc nie dostaje znacznika.
-- [ ] Moduł importuje statycznie tylko `engine.ts`. Test działa bez `HEVY_API_KEY`.
-- [ ] Testy na danych w kodzie pokrywają każdy znacznik i podsumowanie.
+- [x] Moduł importuje statycznie tylko `engine.ts`. Test działa bez `HEVY_API_KEY`.
+- [x] Testy na danych w kodzie pokrywają każdy znacznik i podsumowanie.
 
 **Pliki:** `src/backtest.ts`, `src/backtest.test.ts` · **Zależy od:** — · **Rozmiar:** S
 
