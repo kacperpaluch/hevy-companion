@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { changes, expandWeights, nextTarget, stalled, toPutBody, type HevySet, type Result, type Routine } from './engine.ts';
+import { changes, e1rm, expandWeights, nextTarget, snapDown, stalled, toPutBody, weightFor, type HevySet, type Result, type Routine } from './engine.ts';
 
 const rule = { min: 8, max: 12, increment: 2.5, maxRpe: 9 };
 const dumbbells = { ...rule, weights: expandWeights([[1, 10, 1], [12.5, 50, 2.5]]) };
@@ -111,4 +111,22 @@ test('plateau needs three comparable sessions and no rep improvement in any set'
   assert.equal(stalled([[s(null, 10)], [s(null, 10)], [s(null, 10)]]), false);
   assert.equal(stalled([[s(30, null)], [s(30, null)], [s(30, null)]]), false);
   assert.equal(stalled([[s(10, 10, 'warmup'), ...same], same, same]), true);
+});
+
+test('e1RM: Brzycki up to 10 reps, Epley above, capped at 15 reps', () => {
+  const close = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-9, `${a} ≈ ${b}`);
+  close(e1rm(100, 10), 100 * (1 + 10 / 30)); // both formulas meet at 10
+  close(e1rm(80, 12), 112);
+  assert.equal(e1rm(80, 20), e1rm(80, 15));
+  close(e1rm(80, 15), 120);
+  for (const r of [1, 5, 8, 10, 11, 12, 15]) close(weightFor(e1rm(80, r), r), 80);
+  close(weightFor(120, 10), 90);
+});
+test('snapDown: heaviest available load at or below the target', () => {
+  assert.equal(snapDown(93.3, 80, rule), 92.5);
+  assert.equal(snapDown(93.3, 80, { ...rule, increment: 5 }), 90);
+  assert.equal(snapDown(84, 80, { ...rule, increment: 5 }), 80);
+  assert.equal(snapDown(8.17, 7, dumbbells), 8);
+  assert.equal(snapDown(12, 10, dumbbells), 10);
+  assert.equal(snapDown(0.5, 1, dumbbells), undefined);
 });

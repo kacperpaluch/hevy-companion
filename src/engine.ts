@@ -57,7 +57,16 @@ export function expandWeights(ranges: [number, number, number][]): number[] {
 const stepUp = (w: number, rule: Rule) => (rule.weights ? rule.weights.find((x) => x > w) : r2(w + rule.increment!));
 const stepDown = (w: number, rule: Rule) =>
   rule.weights ? rule.weights.findLast((x) => x < w) : w - rule.increment! > 0 ? r2(w - rule.increment!) : undefined;
-const PICK_STEP = 'Wybierz skok ciężaru dla tego ćwiczenia, żeby policzyć nowy ciężar.';
+// Estimated one-rep max: Brzycki up to 10 reps, Epley above (they meet at 10); past 15 reps the estimate stops rising.
+export function e1rm(weight: number, reps: number) {
+  const r = Math.min(reps, 15);
+  return r <= 10 ? (weight * 36) / (37 - r) : weight * (1 + r / 30);
+}
+export const weightFor = (oneRm: number, reps: number) => (reps <= 10 ? (oneRm * (37 - reps)) / 36 : oneRm / (1 + Math.min(reps, 15) / 30));
+// Heaviest load you can actually set at or below `x`, starting from the current weight when only a step is known.
+export const snapDown = (x: number, weight: number, rule: Rule) =>
+  rule.weights ? rule.weights.findLast((w) => w <= x) : r2(weight + Math.floor((x - weight) / rule.increment! + 1e-9) * rule.increment!);
+const PICK_STEP ='Wybierz skok ciężaru dla tego ćwiczenia, żeby policzyć nowy ciężar.';
 
 // sessions: this exercise's sets from past workouts, newest first.
 export function nextTarget(sessions: HevySet[][], rule: Rule): Result {

@@ -62,13 +62,13 @@ Reguła 4 ze specu: ciężar zostaje W; serie lżejsze liczą się jak najsłabs
 ciężarach. Zapisz raport jako `data/backtest-after-t4.txt`.
 **Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** T3 · **Rozmiar:** XS
 
-### - [ ] T5: funkcje e1RM
+### - [x] T5: funkcje e1RM
 `e1rm(w, r)` (Brzycki ≤ 10, Epley 11–15, obcięcie do 15), `weightFor(e1rm, r)` (odwrotność), `snapDown(x, rule)`
 (największy dostępny ciężar ≤ x: z listy `weights` albo `W + k × increment`).
 
 **Akceptacja**
-- [ ] Testy: ciągłość przy 10 powt.; 20 powt. liczone jak 15; `weightFor(e1rm(w, r), r) ≈ w`; `snapDown` z listą hantli i ze skokiem.
-- [ ] Brak zmian w decyzjach (`nextTarget` jeszcze ich nie używa).
+- [x] Testy: ciągłość przy 10 powt.; 20 powt. liczone jak 15; `weightFor(e1rm(w, r), r) ≈ w`; `snapDown` z listą hantli i ze skokiem.
+- [x] Brak zmian w decyzjach (`nextTarget` jeszcze ich nie używa).
 
 **Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** — (po T4 dla czytelności) · **Rozmiar:** S
 
