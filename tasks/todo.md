@@ -37,17 +37,17 @@ raport zgadza się z porównaniem z rozmowy (np. wyciskanie nad głowę: zalecen
 
 ## Faza 2: silnik
 
-### - [ ] T3: drabinka +1 w najsłabszej serii
+### - [x] T3: drabinka +1 w najsłabszej serii
 Reguła 3 ze specu (decyzja po backteście): ciężar zostaje, każda seria ≥ dolna granica, +1 powt. tylko w najsłabszej serii
 (remis → pierwsza), ≤ górna granica.
 
 **Akceptacja**
-- [ ] Testy: 11/10 → 11/11; 9/7 → 9/8; 13/9 → 12/10 (najpierw obcięcie do górnej granicy); 80×10, 80×9 → 10/10.
-- [ ] Zaktualizowane oczekiwania w istniejących testach (silnik, serwer, UI) wyłącznie tam, gdzie zmienia się cel powtórzeń drabinki.
-- [ ] Powód mówi, w której serii dokładasz powtórzenie.
+- [x] Testy: 11/10 → 11/11; 9/7 → 9/8; 13/9 → 12/10 (najpierw obcięcie do górnej granicy); 80×10, 80×9 → 10/10.
+- [x] Zaktualizowane oczekiwania w istniejących testach (silnik, serwer, UI) wyłącznie tam, gdzie zmienia się cel powtórzeń drabinki.
+- [x] Powód mówi, w której serii dokładasz powtórzenie.
 
-**Weryfikacja ręczna:** `diff data/backtest-baseline.txt <(npm run -s backtest)`: różnice **tylko** w celach `hold` dla sesji z jednym
-ciężarem; podsumowanie zbliżone do porównania z rozmowy (więcej `=`). Zapisz raport jako `data/backtest-after-t3.txt`.
+**Weryfikacja ręczna:** `diff data/backtest-baseline.txt <(npm run -s backtest)`: różnice **tylko** w celach powtórzeń decyzji `hold`
+(także w sesjach mieszanych, które poprawia T4); więcej `=`. Wynik: `=` 4 → 14, `↓` 31 → 21, nic poza `hold` się nie zmieniło. Zapisz raport jako `data/backtest-after-t3.txt`.
 **Pliki:** `src/engine.ts`, `src/engine.test.ts`, ewentualnie `src/server.test.ts`, `src/frontend.test.ts` · **Zależy od:** Checkpoint A · **Rozmiar:** S
 
 ### - [ ] T4: poprawka serii na różnych ciężarach

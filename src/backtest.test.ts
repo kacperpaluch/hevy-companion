@@ -5,7 +5,7 @@ import type { HevySet } from './engine.ts';
 
 const rule = { min: 8, max: 12, increment: 5, maxRpe: 9 };
 const s = (weight_kg: number | null, reps: number | null): HevySet => ({ type: 'normal', weight_kg, reps });
-// replay takes sessions newest-first; advice after [80×11, 80×10] is hold 80 kg × 12/11
+// replay takes sessions newest-first; advice after [80×11, 80×10] is hold 80 kg × 11/11
 const after = (...next: HevySet[]) => replay([next, [s(80, 11), s(80, 10)]], rule)[0].mark;
 
 test('marks what was done next against the advice', () => {
@@ -31,7 +31,7 @@ test('report: one line per session, rule header, per-exercise summary', async ()
   const text = report('Wyciskanie nogami', rule, replay([[s(80, 12), s(80, 11)], [s(80, 11), s(80, 10)]], rule));
   assert.deepEqual(text.split('\n').map((l) => l.replace(/ +/g, ' ')), [
     '## Wyciskanie nogami · 8–12 · co 5 kg',
-    ' 80×11 80×10 → hold 80 kg × 12/11 → 80×12 80×11 =',
+    ' 80×11 80×10 → hold 80 kg × 11/11 → 80×12 80×11 =',
     ' 80×12 80×11 → hold 80 kg × 12/12',
     ' podsumowanie: = 1 · ↑ 0 · ↓ 0 · pominięte 0',
   ]);

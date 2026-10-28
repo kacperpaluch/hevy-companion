@@ -11,11 +11,21 @@ const wr = (r: Result) => (r.action === 'skip' ? r.action : [r.action, r.weight,
 test('all sets at top of range → add weight, reset to bottom', () => {
   assert.deepEqual(wr(nextTarget([[s(30, 14), s(30, 12)]], rule)), ['increase', 32.5, [8, 8]]);
 });
-test('not all sets at top → hold, each set +1 rep within the range', () => {
+test('not all sets at top → hold, ladder +1 on the weakest set within the range', () => {
   assert.deepEqual(wr(nextTarget([[s(25, 13), s(25, 9)]], rule)), ['hold', 25, [12, 10]]);
-  assert.deepEqual(wr(nextTarget([[s(12.5, 9), s(12.5, 8)]], rule)), ['hold', 12.5, [10, 9]]);
-  assert.deepEqual(wr(nextTarget([[s(12.5, 9), s(12.5, 7)]], rule)), ['hold', 12.5, [10, 8]]); // set below range lifts to the bottom
+  assert.deepEqual(wr(nextTarget([[s(12.5, 9), s(12.5, 8)]], rule)), ['hold', 12.5, [9, 9]]);
+  assert.deepEqual(wr(nextTarget([[s(12.5, 9), s(12.5, 7)]], rule)), ['hold', 12.5, [9, 8]]);
+  assert.deepEqual(wr(nextTarget([[s(12.5, 9), s(12.5, 6), s(12.5, 5)]], rule)), ['hold', 12.5, [9, 8, 8]]); // sets below range lift to the bottom
   assert.deepEqual(wr(nextTarget([[s(30, 12), s(30, 12), s(25, 12)]], rule)), ['hold', 30, [12, 12, 12]]); // last set dropped to 25 kg
+});
+test('rep ladder: +1 only on the weakest set (first on a tie), within the range', () => {
+  assert.deepEqual(wr(nextTarget([[s(25, 11), s(25, 10)]], rule)), ['hold', 25, [11, 11]]);
+  assert.deepEqual(wr(nextTarget([[s(25, 9), s(25, 7)]], rule)), ['hold', 25, [9, 8]]);
+  assert.deepEqual(wr(nextTarget([[s(25, 13), s(25, 9)]], rule)), ['hold', 25, [12, 10]]); // above the range is capped first
+  assert.deepEqual(wr(nextTarget([[s(80, 10), s(80, 9)]], rule)), ['hold', 80, [10, 10]]);
+  assert.deepEqual(wr(nextTarget([[s(25, 10), s(25, 10)]], rule)), ['hold', 25, [11, 10]]);
+  const r = nextTarget([[s(25, 11), s(25, 10)]], rule);
+  assert.match(r.action !== 'skip' ? r.reason : '', /\+1 powt\. w serii 2/);
 });
 test('warmups ignored; bodyweight, no history and excluded skipped', () => {
   assert.deepEqual(wr(nextTarget([[s(5, 20, 'warmup'), s(20, 9)]], rule)), ['hold', 20, [10]]);
@@ -32,7 +42,7 @@ test('available weights: next real dumbbell, not +2.5', () => {
 });
 test('no step configured: rep targets still work, load changes ask for a step', () => {
   const noStep = { min: 8, max: 12, maxRpe: 9 };
-  assert.deepEqual(wr(nextTarget([[s(30, 10), s(30, 9)]], noStep)), ['hold', 30, [11, 10]]);
+  assert.deepEqual(wr(nextTarget([[s(30, 10), s(30, 9)]], noStep)), ['hold', 30, [10, 10]]);
   assert.equal(wr(nextTarget([[s(30, 12), s(30, 12)]], noStep)), 'skip');
   assert.equal(wr(nextTarget([[s(30, 6)], [s(30, 6)]], noStep)), 'skip');
 });
@@ -71,7 +81,7 @@ test('PUT body: per-set reps; routine sets beyond last session reuse the last ta
   ] } as unknown as Routine;
   const result = nextTarget([[s(12.5, 9), s(12.5, 7)]], rule);
   const [ex] = toPutBody(routine, [result]).routine.exercises;
-  assert.deepEqual(ex.sets.map((x) => x.reps), [10, 10, 8, 8]);
+  assert.deepEqual(ex.sets.map((x) => x.reps), [10, 9, 8, 8]);
   assert.equal(changes(routine.exercises[0], nextTarget([[s(12.5, 10), s(12.5, 8)]], rule)), true);
 });
 
