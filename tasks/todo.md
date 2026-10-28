@@ -87,9 +87,9 @@ hamulec `maxRpe` bez zmian.
 **Pliki:** `src/engine.ts`, `src/engine.test.ts` · **Zależy od:** T5 · **Rozmiar:** S
 
 ### - [ ] Checkpoint B
-- [ ] `npm test` zielone
-- [ ] Diffy raportów zgodne z oczekiwaniami (T3: tylko cele drabinki; T4: tylko serie mieszane; T6: pusty)
-- [ ] `npm start`: wiersze i szczegóły ćwiczeń pokazują sensowne decyzje i powody
+- [x] `npm test` zielone (48/48)
+- [x] Diffy raportów zgodne z oczekiwaniami (T3: tylko cele drabinki; T4: tylko serie mieszane; T6: pusty)
+- [x] `npm start`: wiersze i szczegóły ćwiczeń pokazują sensowne decyzje i powody (sprawdzone przez `GET /api/plan`, bez przeglądarki)
 - [ ] Przegląd z Tobą
 
 ## Faza 3: dokumentacja
